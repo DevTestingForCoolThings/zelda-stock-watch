@@ -3,6 +3,9 @@
 
   "ntfy_server": "https://ntfy.sh",
 
+  "_heartbeat": "Send a quiet all-clear push this often (hours), so silence is trustworthy. Set to 0 to disable.",
+  "heartbeat_hours": 24,
+
   "discovery": {
     "enabled": true,
     "sitemap": "https://www.nintendo.com/en-ca/store/sitemap.xml",

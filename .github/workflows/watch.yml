@@ -2,9 +2,10 @@ name: Zelda 40th stock watch
 
 on:
   schedule:
-    # Every 5 minutes. This is the fastest GitHub allows for scheduled
-    # workflows, and under load GitHub can still delay a run by 5-15 minutes.
-    - cron: "*/5 * * * *"
+    # Every 5 minutes, offset off the hour boundary (:02, :07, :12...).
+    # GitHub warns that schedules are delayed under load, and load spikes at
+    # :00 and :30 when most crons fire. 5 minutes is the fastest allowed.
+    - cron: "2-59/5 * * * *"
   workflow_dispatch:
     inputs:
       dry_run:
@@ -12,7 +13,7 @@ on:
         type: boolean
         default: false
       diagnose:
-        description: "Probe Walmart fetch strategies and print what came back"
+        description: "Probe every HTML source with all fetch strategies and report"
         type: boolean
         default: false
 

@@ -121,6 +121,48 @@ def fetch_via_curl(url, timeout=25):
     return None
 
 
+BLOCK_MARKERS = (
+    r"px-captcha|Robot or human|blocked because we believe|Verify Your Identity"
+    r"|Access Denied|Reference #[0-9a-f]|Request unsuccessful"
+)
+
+
+def fetch_with_fallbacks(url, required_marker):
+    """
+    Fetch a bot-protected page, trying progressively different clients.
+
+    Returns (html, strategy_name). Raises ValueError listing what every
+    strategy saw, which is what makes a block diagnosable from CI logs.
+
+    The strategies differ in ways bot vendors actually fingerprint: HTTP
+    header set, and TLS stack (urllib vs curl). None of them help against
+    IP-reputation blocking, which is the common case from datacenter ranges.
+    """
+    attempts = [
+        ("browser-headers", lambda: fetch(url, browser_like=True)),
+        ("plain", lambda: fetch(url)),
+        ("curl", lambda: fetch_via_curl(url)),
+    ]
+    notes = []
+    for name, attempt in attempts:
+        try:
+            candidate = attempt()
+        except Exception as e:
+            notes.append("{}: {}".format(name, e))
+            continue
+        if not candidate:
+            notes.append("{}: empty response".format(name))
+            continue
+        if re.search(BLOCK_MARKERS, candidate, re.I):
+            notes.append("{}: bot challenge".format(name))
+            continue
+        if required_marker not in candidate:
+            notes.append("{}: no {} ({}b)".format(name, required_marker, len(candidate)))
+            continue
+        return candidate, name
+    raise ValueError("all fetch strategies failed [{}]".format("; ".join(notes)))
+
+
 # --------------------------------------------------------------------------
 # Per-retailer availability checks
 #
@@ -161,10 +203,7 @@ def check_ebgames(target):
     EB Games Canada. Server-rendered and exposes the same schema.org
     availability that Nintendo CA does.
     """
-    html = fetch(target["url"], browser_like=True)
-
-    if re.search(r"(Access Denied|Reference #[0-9a-f]|Request unsuccessful)", html, re.I):
-        raise ValueError("blocked by EB Games bot check")
+    html, _ = fetch_with_fallbacks(target["url"], "schema.org")
 
     m = re.search(r'"availability"\s*:\s*"https?://schema\.org/(\w+)"', html)
     if not m:
@@ -248,39 +287,9 @@ def check_walmart(target):
     down the page cannot trigger a false in-stock alert.
 
     Best-effort overall: the page sits behind PerimeterX, which blocks
-    datacenter IPs (including GitHub Actions runners). We try three fetch
-    strategies before giving up, since the block is inconsistent.
+    datacenter IPs (including GitHub Actions runners).
     """
-    html = None
-    attempts = [
-        ("browser-headers", lambda: fetch(target["url"], browser_like=True)),
-        ("plain", lambda: fetch(target["url"])),
-        ("curl", lambda: fetch_via_curl(target["url"])),
-    ]
-    notes = []
-    for name, attempt in attempts:
-        try:
-            candidate = attempt()
-        except Exception as e:
-            notes.append("{}: {}".format(name, e))
-            continue
-        if not candidate:
-            notes.append("{}: empty response".format(name))
-            continue
-        if re.search(r"(px-captcha|Robot or human|blocked because we believe)",
-                     candidate, re.I):
-            notes.append("{}: PerimeterX challenge".format(name))
-            continue
-        if "__NEXT_DATA__" not in candidate:
-            notes.append("{}: no __NEXT_DATA__ ({}b)".format(name, len(candidate)))
-            continue
-        html = candidate
-        break
-
-    # Report every strategy, not just the last: knowing which ones got a
-    # challenge versus a redirect is what makes this debuggable from CI logs.
-    if html is None:
-        raise ValueError("Walmart unreachable [{}]".format("; ".join(notes)))
+    html, _ = fetch_with_fallbacks(target["url"], "__NEXT_DATA__")
 
     m = re.search(r'<script id="__NEXT_DATA__"[^>]*>(.*?)</script>', html, re.S)
     if not m:
@@ -608,7 +617,42 @@ def main():
         log("discovery: ERROR ({})".format(e))
         state["discovery_last_error"] = str(e)[:300]
 
-    # ---- 3. Send ---------------------------------------------------------
+    # ---- 3. Heartbeat ----------------------------------------------------
+    # Without this, "no notifications" is ambiguous: it could mean nothing is
+    # in stock, or it could mean the bot died three weeks ago. A periodic
+    # all-clear makes silence trustworthy.
+    hb_hours = cfg.get("heartbeat_hours", 24)
+    if hb_hours:
+        last_hb = state.get("last_heartbeat")
+        due = True
+        if last_hb:
+            try:
+                elapsed = (datetime.now(timezone.utc)
+                           - datetime.fromisoformat(last_hb)).total_seconds()
+                due = elapsed >= hb_hours * 3600
+            except (ValueError, TypeError):
+                due = True
+        if due:
+            state["last_heartbeat"] = now_iso()
+            ok, broken = [], []
+            for t in cfg.get("targets", []):
+                if not t.get("enabled", True):
+                    continue
+                st = statuses.get(t["id"], {})
+                label = t.get("label", t["id"])
+                if st.get("last_error"):
+                    broken.append("x {} - {}".format(label, st["last_error"][:60]))
+                else:
+                    ok.append("- {}: {}".format(label, st.get("detail", "?")))
+            body = "Still watching. Nothing buyable yet.\n\n" + "\n".join(ok)
+            if broken:
+                body += "\n\nNot working:\n" + "\n".join(broken)
+            alerts.append((
+                "Zelda watcher still alive", body, "min", "hourglass_flowing_sand",
+                "https://github.com/DevTestingForCoolThings/zelda-stock-watch/actions",
+            ))
+
+    # ---- 4. Send ---------------------------------------------------------
 
     if dry_run:
         log("DRY_RUN: would send {} notification(s)".format(len(alerts)))
