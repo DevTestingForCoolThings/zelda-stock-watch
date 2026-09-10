@@ -19,12 +19,13 @@ with a tappable link and you buy it yourself.
 | Nintendo CA | `schema.org/availability` in the product page | ✅ Working — server-rendered, no bot protection |
 | Best Buy CA | `ecomm-api/availability` JSON endpoint | ✅ Working — clean public JSON |
 | Amazon.ca | add-to-cart / `#outOfStock` markers | ✅ Working |
-| EB Games CA | `schema.org/availability` in the product page | ⚠️ Added to replace Walmart; verify with `--diagnose` |
+| EB Games CA | `schema.org/availability` in the product page | ❌ **Disabled** — 403 from datacenter IPs (Akamai) |
 | Walmart.ca | `__NEXT_DATA__` product node | ❌ **Disabled** — blocked from datacenter IPs |
 
-### Why Walmart is disabled
+### Why Walmart and EB Games are disabled
 
-Walmart.ca sits behind PerimeterX, which blocks GitHub's runner IP range. All
+Both are blocked from GitHub-s runner IP range. Walmart sits behind PerimeterX;
+EB Games behind Akamai, which returns a flat 403. For Walmart, all
 three fetch strategies (plain, browser headers, curl) get redirected to
 `walmart.ca/blocked?...` with a "Verify Your Identity" challenge page.
 

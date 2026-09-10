@@ -71,7 +71,7 @@
     },
     {
       "id": "ebgames-ca-console",
-      "enabled": true,
+      "enabled": false,
       "source": "ebgames",
       "label": "Switch 2 Zelda 40th Console (EB Games CA)",
       "url": "https://www.ebgames.ca/shop/nintendo-switch-2-the-legend-of-zelda-40th-anniversary-edition-220621"
