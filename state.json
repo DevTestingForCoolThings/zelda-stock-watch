@@ -80,12 +80,12 @@
       "warned_broken": false
     },
     "walmart-ca-console": {
-      "fails": 1,
-      "last_error": "blocked by Walmart bot check (PerimeterX)"
+      "fails": 2,
+      "last_error": "blocked by Walmart bot check (curl: no __NEXT_DATA__)"
     },
     "walmart-ca-procontroller": {
-      "fails": 1,
-      "last_error": "blocked by Walmart bot check (PerimeterX)"
+      "fails": 2,
+      "last_error": "blocked by Walmart bot check (curl: no __NEXT_DATA__)"
     }
   }
 }
