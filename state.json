@@ -46,10 +46,11 @@
   "last_heartbeat": "2026-09-10T12:19:34+00:00",
   "targets": {
     "amazon-ca-console": {
-      "buyable": false,
-      "detail": "Currently unavailable.",
-      "fails": 1,
-      "last_error": "blocked by Amazon bot check",
+      "buyable": true,
+      "detail": "This item will be released on October 29, 2026.",
+      "fails": 0,
+      "last_alerted": "2026-09-10T16:30:51+00:00",
+      "last_error": null,
       "warned_broken": false
     },
     "bestbuy-ca-case": {
@@ -79,7 +80,7 @@
     },
     "nintendo-ca-console": {
       "buyable": false,
-      "detail": "OutOfStock (Nintendo CA shows 'Find retailers', not sold direct)",
+      "detail": "InStock (Nintendo CA shows 'Find retailers', not sold direct)",
       "fails": 0,
       "last_error": null,
       "warned_broken": false
