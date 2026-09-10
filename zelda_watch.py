@@ -28,6 +28,7 @@ from datetime import datetime, timezone
 HERE = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = os.path.join(HERE, "config.json")
 STATE_PATH = os.path.join(HERE, "state.json")
+DIAG_PATH = os.path.join(HERE, "diagnostics.txt")
 
 UA = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -409,15 +410,30 @@ def run_diagnostics(cfg):
     back. Run with --diagnose; intended for debugging blocks from CI, where
     the runner's IP behaves differently from a home connection.
     """
-    log("=== fetch diagnostics ===")
+    lines = []
+
+    def out(msg):
+        log(msg)
+        lines.append(msg)
+
+    def finish():
+        # Written to a file (and committed by the workflow) because Actions
+        # logs need authentication to read, and this output is the whole point.
+        with open(DIAG_PATH, "w", encoding="utf-8") as f:
+            f.write("Diagnostics run {}\n\n".format(now_iso()))
+            f.write("\n".join(lines) + "\n")
+        log("diagnostics written to {}".format(os.path.basename(DIAG_PATH)))
+
+    out("=== fetch diagnostics ===")
     targets = [t for t in cfg.get("targets", []) if t.get("source") == "walmart"]
     if not targets:
-        log("no walmart targets configured")
+        out("no walmart targets configured")
+        finish()
         return
 
     for t in targets[:1]:
         url = t["url"]
-        log("target: {}".format(url))
+        out("target: {}".format(url))
 
         for label, browser in (("urllib-plain", False), ("urllib-browser", True)):
             try:
@@ -430,10 +446,10 @@ def run_diagnostics(cfg):
                     raw = resp.read()
                     status, final = resp.status, resp.geturl()
                 text = raw.decode("utf-8", errors="replace")
-                log("  {:16} HTTP {} -> {}".format(label, status, final))
-                log("  {:16} {}".format("", _describe(text)))
+                out("  {:16} HTTP {} -> {}".format(label, status, final))
+                out("  {:16} {}".format("", _describe(text)))
             except Exception as e:
-                log("  {:16} EXCEPTION {}".format(label, e))
+                out("  {:16} EXCEPTION {}".format(label, e))
 
         try:
             probe = subprocess.run(
@@ -442,13 +458,15 @@ def run_diagnostics(cfg):
                  "-w", "http_code=%{http_code} redirects=%{num_redirects} final=%{url_effective}",
                  url],
                 capture_output=True, timeout=40)
-            log("  {:16} {}".format("curl-trace", probe.stdout.decode("utf-8", "replace").strip()
+            out("  {:16} {}".format("curl-trace", probe.stdout.decode("utf-8", "replace").strip()
                                     or probe.stderr.decode("utf-8", "replace").strip()[:200]))
         except Exception as e:
-            log("  {:16} EXCEPTION {}".format("curl-trace", e))
+            out("  {:16} EXCEPTION {}".format("curl-trace", e))
 
         body = fetch_via_curl(url)
-        log("  {:16} {}".format("curl-body", _describe(body)))
+        out("  {:16} {}".format("curl-body", _describe(body)))
+
+    finish()
 
 
 def main():

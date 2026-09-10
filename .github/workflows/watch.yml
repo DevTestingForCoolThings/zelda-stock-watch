@@ -37,6 +37,16 @@ jobs:
         if: ${{ inputs.diagnose }}
         run: python3 zelda_watch.py --diagnose
 
+      - name: Commit diagnostics
+        # Actions logs need auth to read, so publish the result into the repo.
+        if: ${{ inputs.diagnose }}
+        run: |
+          git config user.name  "zelda-watch-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f diagnostics.txt
+          git commit -m "Fetch diagnostics from CI [skip ci]" || echo "nothing to commit"
+          git pull --rebase --autostash && git push
+
       - name: Run stock check
         if: ${{ !inputs.diagnose }}
         env:
