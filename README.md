@@ -14,12 +14,28 @@ with a tappable link and you buy it yourself.
 
 ## What it watches
 
-| Source | What it reads | Reliability |
+| Source | What it reads | Status from GitHub Actions |
 |---|---|---|
-| Nintendo CA | `schema.org/availability` in the product page | Solid — server-rendered, no bot protection |
-| Best Buy CA | `ecomm-api/availability` JSON endpoint | Solid — clean public JSON |
-| Amazon.ca | add-to-cart / `#outOfStock` markers | Good — may hit bot checks occasionally |
-| Walmart.ca | `__NEXT_DATA__` product node | Best-effort — PerimeterX may block CI IPs |
+| Nintendo CA | `schema.org/availability` in the product page | ✅ Working — server-rendered, no bot protection |
+| Best Buy CA | `ecomm-api/availability` JSON endpoint | ✅ Working — clean public JSON |
+| Amazon.ca | add-to-cart / `#outOfStock` markers | ✅ Working |
+| EB Games CA | `schema.org/availability` in the product page | ⚠️ Added to replace Walmart; verify with `--diagnose` |
+| Walmart.ca | `__NEXT_DATA__` product node | ❌ **Disabled** — blocked from datacenter IPs |
+
+### Why Walmart is disabled
+
+Walmart.ca sits behind PerimeterX, which blocks GitHub's runner IP range. All
+three fetch strategies (plain, browser headers, curl) get redirected to
+`walmart.ca/blocked?...` with a "Verify Your Identity" challenge page.
+
+Two different TLS stacks and three header profiles producing an identical result
+means the block keys on **IP reputation**, not client fingerprint — so no
+client-side change fixes it. Getting through would need a residential proxy,
+which means a paid service and an API key.
+
+The code and config entries are kept (just `"enabled": false`) so it can be
+re-tested at any time with a diagnose run. Walmart works fine from a home
+connection, so running this script locally still checks it.
 
 Plus **new-listing discovery**: every run it scans the Nintendo Canada store
 sitemap for product URLs matching Zelda/40th keywords. When Nintendo CA adds an
@@ -145,6 +161,26 @@ the product URL. A URL must match **at least one from each list**. Loosen them t
 catch more, tighten to reduce noise.
 
 ---
+
+## Diagnosing a blocked source
+
+If a source starts failing, run the workflow manually with the **diagnose**
+checkbox ticked. It probes one target per HTML-fetched source using three fetch
+strategies and reports HTTP status, redirect chain, final URL, page title and
+block markers — then commits the result to `diagnostics.txt` so you can read it
+without digging through Actions logs.
+
+Disabled targets are probed too, so you can re-test Walmart without editing
+config. Locally:
+
+```bash
+python3 zelda_watch.py --diagnose
+```
+
+Reading the output: a redirect to a `/blocked` URL means IP-reputation blocking
+(not fixable client-side). A 403 means the same. A 200 with a small body and
+`no-NEXT_DATA` means a JavaScript challenge. A 429 means you are being rate
+limited — back off rather than retrying.
 
 ## Running it locally
 

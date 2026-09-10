@@ -72,6 +72,10 @@
       "last_error": null,
       "warned_broken": false
     },
+    "ebgames-ca-console": {
+      "fails": 1,
+      "last_error": "HTTP Error 429: Too Many Requests"
+    },
     "nintendo-ca-console": {
       "buyable": false,
       "detail": "OutOfStock (Nintendo CA shows 'Find retailers', not sold direct)",

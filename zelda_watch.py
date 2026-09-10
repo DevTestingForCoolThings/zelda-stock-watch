@@ -156,6 +156,28 @@ def check_nintendo(target):
     return buyable, detail
 
 
+def check_ebgames(target):
+    """
+    EB Games Canada. Server-rendered and exposes the same schema.org
+    availability that Nintendo CA does.
+    """
+    html = fetch(target["url"], browser_like=True)
+
+    if re.search(r"(Access Denied|Reference #[0-9a-f]|Request unsuccessful)", html, re.I):
+        raise ValueError("blocked by EB Games bot check")
+
+    m = re.search(r'"availability"\s*:\s*"https?://schema\.org/(\w+)"', html)
+    if not m:
+        raise ValueError("no schema.org availability found (blocked or layout changed?)")
+    status = m.group(1)
+
+    p = re.search(r'"price"\s*:\s*"?([0-9]+(?:\.[0-9]{2})?)', html)
+    price = "${}".format(p.group(1)) if p else "?"
+
+    buyable = status in BUYABLE_SCHEMA
+    return buyable, "{} | {}".format(status, price)
+
+
 def check_bestbuy(target):
     """Best Buy CA has a clean public availability JSON endpoint."""
     sku = target["sku"]
@@ -295,7 +317,13 @@ CHECKERS = {
     "bestbuy": check_bestbuy,
     "amazon": check_amazon,
     "walmart": check_walmart,
+    "ebgames": check_ebgames,
 }
+
+# Sources fetched as HTML, and therefore worth probing with --diagnose when a
+# block is suspected. Best Buy is excluded: it uses a JSON API, and its HTML
+# product pages 403 even from a residential IP.
+DIAGNOSABLE = ("ebgames", "walmart", "amazon", "nintendo")
 
 
 # --------------------------------------------------------------------------
@@ -406,9 +434,12 @@ def _describe(text):
 
 def run_diagnostics(cfg):
     """
-    Probe each fetch strategy against the Walmart targets and print what came
-    back. Run with --diagnose; intended for debugging blocks from CI, where
-    the runner's IP behaves differently from a home connection.
+    Probe each fetch strategy against one target per HTML-fetched source and
+    report what came back. Run with --diagnose; intended for debugging blocks
+    from CI, where the runner's IP behaves differently from a home connection.
+
+    Disabled targets are probed too, so a source switched off because it was
+    blocked can be re-tested without editing config.
     """
     lines = []
 
@@ -425,15 +456,23 @@ def run_diagnostics(cfg):
         log("diagnostics written to {}".format(os.path.basename(DIAG_PATH)))
 
     out("=== fetch diagnostics ===")
-    targets = [t for t in cfg.get("targets", []) if t.get("source") == "walmart"]
-    if not targets:
-        out("no walmart targets configured")
+
+    # One representative target per source, disabled ones included.
+    probes = []
+    for source in DIAGNOSABLE:
+        for t in cfg.get("targets", []):
+            if t.get("source") == source:
+                probes.append(t)
+                break
+    if not probes:
+        out("no diagnosable targets configured")
         finish()
         return
 
-    for t in targets[:1]:
+    for t in probes:
         url = t["url"]
-        out("target: {}".format(url))
+        out("")
+        out("[{}] {}".format(t.get("source"), url))
 
         for label, browser in (("urllib-plain", False), ("urllib-browser", True)):
             try:

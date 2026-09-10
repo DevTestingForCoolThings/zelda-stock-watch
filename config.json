@@ -67,6 +67,13 @@
       "url": "https://www.bestbuy.ca/en-ca/product/20149880"
     },
     {
+      "id": "ebgames-ca-console",
+      "enabled": true,
+      "source": "ebgames",
+      "label": "Switch 2 Zelda 40th Console (EB Games CA)",
+      "url": "https://www.ebgames.ca/shop/nintendo-switch-2-the-legend-of-zelda-40th-anniversary-edition-220621"
+    },
+    {
       "id": "amazon-ca-console",
       "enabled": true,
       "source": "amazon",
@@ -75,14 +82,14 @@
     },
     {
       "id": "walmart-ca-console",
-      "enabled": true,
+      "enabled": false,
       "source": "walmart",
       "label": "Switch 2 Zelda 40th Console (Walmart.ca)",
       "url": "https://www.walmart.ca/en/ip/Nintendo-Switch-2-The-Legend-of-Zelda-40th-Anniversary-Edition/4LPRUXHD1MMQ"
     },
     {
       "id": "walmart-ca-procontroller",
-      "enabled": true,
+      "enabled": false,
       "source": "walmart",
       "label": "Zelda 40th Pro Controller (Walmart.ca)",
       "url": "https://www.walmart.ca/en/ip/Nintendo-Switch-2-Pro-Controller-The-Legend-of-Zelda-40th-Anniversary-Edition/3CVEAW67GHIT"
