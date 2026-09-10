@@ -1,0 +1,91 @@
+{
+  "discovered": [
+    "https://www.nintendo.com/en-ca/store/products/amiibo-bokoblin-the-legend-of-zelda-breath-of-the-wild-series-104670/",
+    "https://www.nintendo.com/en-ca/store/products/amiibo-daruk-the-legend-of-zelda-breath-of-the-wild-series-106337/",
+    "https://www.nintendo.com/en-ca/store/products/amiibo-ganondorf-the-legend-of-zelda-tears-of-the-kingdom-117069/",
+    "https://www.nintendo.com/en-ca/store/products/amiibo-guardian-legend-of-zelda-breath-of-the-wild-104417/",
+    "https://www.nintendo.com/en-ca/store/products/amiibo-link-8-bit-the-legend-of-zelda-series-104387/",
+    "https://www.nintendo.com/en-ca/store/products/amiibo-link-archer-the-legend-of-zelda-breath-of-the-wild-series-104664/",
+    "https://www.nintendo.com/en-ca/store/products/amiibo-link-links-awakening-the-legend-of-zelda-series-110134/",
+    "https://www.nintendo.com/en-ca/store/products/amiibo-link-majoras-mask-the-legend-of-zelda-104393/",
+    "https://www.nintendo.com/en-ca/store/products/amiibo-link-ocarina-of-time-104384/",
+    "https://www.nintendo.com/en-ca/store/products/amiibo-link-rider-the-legend-of-zelda-breath-of-the-wild-series-104667/",
+    "https://www.nintendo.com/en-ca/store/products/amiibo-link-the-legend-of-zelda-117064/",
+    "https://www.nintendo.com/en-ca/store/products/amiibo-link-twilight-princess-legend-of-zelda-104390/",
+    "https://www.nintendo.com/en-ca/store/products/amiibo-mipha-the-legend-of-zelda-breath-of-the-wild-series-105975/",
+    "https://www.nintendo.com/en-ca/store/products/amiibo-revali-the-legend-of-zelda-breath-of-the-wild-series-105978/",
+    "https://www.nintendo.com/en-ca/store/products/amiibo-riju-the-legend-of-zelda-series-120816/",
+    "https://www.nintendo.com/en-ca/store/products/amiibo-sidon-the-legend-of-zelda-series-120817/",
+    "https://www.nintendo.com/en-ca/store/products/amiibo-toon-link-the-legend-of-zelda-series-106168/",
+    "https://www.nintendo.com/en-ca/store/products/amiibo-tulin-the-legend-of-zelda-series-120818/",
+    "https://www.nintendo.com/en-ca/store/products/amiibo-urbosa-the-legend-of-zelda-breath-of-the-wild-series-105981/",
+    "https://www.nintendo.com/en-ca/store/products/amiibo-wolf-link-legend-of-zelda-twilight-princess-103146/",
+    "https://www.nintendo.com/en-ca/store/products/amiibo-young-link-the-legend-of-zelda-ocarina-of-time-series-127006/",
+    "https://www.nintendo.com/en-ca/store/products/amiibo-young-zelda-the-legend-of-zelda-ocarina-of-time-series-127007/",
+    "https://www.nintendo.com/en-ca/store/products/amiibo-yunobo-the-legend-of-zelda-series-120819/",
+    "https://www.nintendo.com/en-ca/store/products/amiibo-zelda-super-smash-bros-100457/",
+    "https://www.nintendo.com/en-ca/store/products/amiibo-zelda-the-legend-of-zelda-breath-of-the-wild-series-104661/",
+    "https://www.nintendo.com/en-ca/store/products/amiibo-zelda-the-legend-of-zelda-tears-of-the-kingdom-117065/",
+    "https://www.nintendo.com/en-ca/store/products/amiibo-zelda-the-legend-of-zelda-wind-waker-series-120627/",
+    "https://www.nintendo.com/en-ca/store/products/hyrule-warriors-age-of-calamity-definitive-edition-switch-2/",
+    "https://www.nintendo.com/en-ca/store/products/hyrule-warriors-age-of-imprisonment-switch-2/",
+    "https://www.nintendo.com/en-ca/store/products/nintendo-switch-2-the-legend-of-zelda-40th-anniversary-edition-121642/",
+    "https://www.nintendo.com/en-ca/store/products/nintendo-switch-2-the-legend-of-zelda-tears-of-the-kingdom-nintendo-switch-2-edition-121505/",
+    "https://www.nintendo.com/en-ca/store/products/nintendo-switch-carrying-case-screen-protector-the-legend-of-zelda-tears-of-the-kingdom-edition-117074/",
+    "https://www.nintendo.com/en-ca/store/products/pro-controller-legend-of-zelda-tears-of-the-kingdom-special-edition-117075/",
+    "https://www.nintendo.com/en-ca/store/products/the-legend-of-zelda-breath-of-the-wild-hylian-shield-collector-s-edition-117704/",
+    "https://www.nintendo.com/en-ca/store/products/the-legend-of-zelda-breath-of-the-wild-link-collectors-edition-114863/",
+    "https://www.nintendo.com/en-ca/store/products/the-legend-of-zelda-breath-of-the-wild-nintendo-switch-2-edition-121523/",
+    "https://www.nintendo.com/en-ca/store/products/the-legend-of-zelda-breath-of-the-wild-nintendo-switch-2-edition-switch-2/",
+    "https://www.nintendo.com/en-ca/store/products/the-legend-of-zelda-ocarina-of-time-switch-2/",
+    "https://www.nintendo.com/en-ca/store/products/the-legend-of-zelda-tears-of-the-kingdom-collector-s-edition-114529/",
+    "https://www.nintendo.com/en-ca/store/products/the-legend-of-zelda-tears-of-the-kingdom-nintendo-switch-2-edition-switch-2/",
+    "https://www.nintendo.com/en-ca/store/products/the-legend-of-zelda-tears-of-the-kingdom-the-complete-official-guide-collectors-edition-120014/",
+    "https://www.nintendo.com/en-ca/store/products/zelda-loftwing-the-legend-of-zelda-skyward-sword-hd-amiibo/"
+  ],
+  "targets": {
+    "amazon-ca-console": {
+      "buyable": false,
+      "detail": "Currently unavailable.",
+      "fails": 0,
+      "last_error": null,
+      "warned_broken": false
+    },
+    "bestbuy-ca-case": {
+      "buyable": false,
+      "detail": "shipping=SoldOutOnline pickup=NotAvailable",
+      "fails": 0,
+      "last_error": null,
+      "warned_broken": false
+    },
+    "bestbuy-ca-console": {
+      "buyable": false,
+      "detail": "shipping=SoldOutOnline pickup=NotAvailable",
+      "fails": 0,
+      "last_error": null,
+      "warned_broken": false
+    },
+    "bestbuy-ca-procontroller": {
+      "buyable": false,
+      "detail": "shipping=SoldOutOnline pickup=NotAvailable",
+      "fails": 0,
+      "last_error": null,
+      "warned_broken": false
+    },
+    "nintendo-ca-console": {
+      "buyable": false,
+      "detail": "OutOfStock (Nintendo CA shows 'Find retailers', not sold direct)",
+      "fails": 0,
+      "last_error": null,
+      "warned_broken": false
+    },
+    "walmart-ca-console": {
+      "fails": 1,
+      "last_error": "blocked by Walmart bot check (PerimeterX)"
+    },
+    "walmart-ca-procontroller": {
+      "fails": 1,
+      "last_error": "blocked by Walmart bot check (PerimeterX)"
+    }
+  }
+}
