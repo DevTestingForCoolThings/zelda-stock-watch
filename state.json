@@ -43,6 +43,7 @@
     "https://www.nintendo.com/en-ca/store/products/the-legend-of-zelda-tears-of-the-kingdom-the-complete-official-guide-collectors-edition-120014/",
     "https://www.nintendo.com/en-ca/store/products/zelda-loftwing-the-legend-of-zelda-skyward-sword-hd-amiibo/"
   ],
+  "last_heartbeat": "2026-09-10T02:43:09+00:00",
   "targets": {
     "amazon-ca-console": {
       "buyable": false,
@@ -73,8 +74,8 @@
       "warned_broken": false
     },
     "ebgames-ca-console": {
-      "fails": 2,
-      "last_error": "HTTP Error 403: Forbidden"
+      "fails": 3,
+      "last_error": "all fetch strategies failed [browser-headers: HTTP Error 403: Forbidden; plain: HTTP Error 403: Forbidden; curl: no schema.org (5384b)]"
     },
     "nintendo-ca-console": {
       "buyable": false,
