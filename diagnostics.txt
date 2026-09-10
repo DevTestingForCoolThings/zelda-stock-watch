@@ -1,0 +1,10 @@
+Diagnostics run 2026-09-10T02:23:29+00:00
+
+=== fetch diagnostics ===
+target: https://www.walmart.ca/en/ip/Nintendo-Switch-2-The-Legend-of-Zelda-40th-Anniversary-Edition/4LPRUXHD1MMQ
+  urllib-plain     HTTP 200 -> https://www.walmart.ca/blocked?url=L2VuL2lwL05pbnRlbmRvLVN3aXRjaC0yLVRoZS1MZWdlbmQtb2YtWmVsZGEtNDB0aC1Bbm5pdmVyc2FyeS1FZGl0aW9uLzRMUFJVWEhEMU1NUQ==&uuid=9c05e75b-acbe-11f1-9906-866cf2c26254&vid=&g=b
+                   7535b title='Verify Your Identity' PERIMETERX-CHALLENGE no-NEXT_DATA
+  urllib-browser   HTTP 200 -> https://www.walmart.ca/blocked?url=L2VuL2lwL05pbnRlbmRvLVN3aXRjaC0yLVRoZS1MZWdlbmQtb2YtWmVsZGEtNDB0aC1Bbm5pdmVyc2FyeS1FZGl0aW9uLzRMUFJVWEhEMU1NUQ==&uuid=9c2a94c3-acbe-11f1-967c-a37ee8613695&vid=&g=b
+                   7535b title='Verify Your Identity' PERIMETERX-CHALLENGE no-NEXT_DATA
+  curl-trace       http_code=200 redirects=1 final=https://www.walmart.ca/blocked?url=L2VuL2lwL05pbnRlbmRvLVN3aXRjaC0yLVRoZS1MZWdlbmQtb2YtWmVsZGEtNDB0aC1Bbm5pdmVyc2FyeS1FZGl0aW9uLzRMUFJVWEhEMU1NUQ==&uuid=9c520201-acbe-11f1-8b52-ed0f3962fb0d&vid=&g=b
+  curl-body        7535b title='Verify Your Identity' PERIMETERX-CHALLENGE no-NEXT_DATA
