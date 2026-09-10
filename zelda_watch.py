@@ -17,6 +17,7 @@ import io
 import json
 import os
 import re
+import subprocess
 import sys
 import time
 import urllib.error
@@ -50,20 +51,71 @@ def log(msg):
 # HTTP
 # --------------------------------------------------------------------------
 
-def fetch(url, timeout=25,
-          accept="text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"):
+HTML_ACCEPT = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+
+# Headers a real Chrome sends. Bot-protection vendors fingerprint the presence,
+# order and plausibility of these, not just the User-Agent.
+BROWSER_HEADERS = {
+    "Accept": HTML_ACCEPT,
+    "Accept-Language": "en-CA,en-US;q=0.9,en;q=0.8",
+    "Cache-Control": "max-age=0",
+    "Sec-Ch-Ua": '"Chromium";v="140", "Not=A?Brand";v="24", "Google Chrome";v="140"',
+    "Sec-Ch-Ua-Mobile": "?0",
+    "Sec-Ch-Ua-Platform": '"Windows"',
+    "Sec-Fetch-Dest": "document",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Site": "none",
+    "Sec-Fetch-User": "?1",
+    "Upgrade-Insecure-Requests": "1",
+}
+
+
+def fetch(url, timeout=25, accept=HTML_ACCEPT, browser_like=False):
     """GET a URL, returning decoded text. Raises on failure."""
     req = urllib.request.Request(url)
+    if browser_like:
+        for k, v in BROWSER_HEADERS.items():
+            req.add_header(k, v)
+    else:
+        req.add_header("Accept", accept)
+        req.add_header("Accept-Language", "en-CA,en;q=0.9")
+        req.add_header("Cache-Control", "no-cache")
     req.add_header("User-Agent", UA)
-    req.add_header("Accept", accept)
-    req.add_header("Accept-Language", "en-CA,en;q=0.9")
     req.add_header("Accept-Encoding", "gzip, identity")
-    req.add_header("Cache-Control", "no-cache")
     with urllib.request.urlopen(req, timeout=timeout) as resp:
         raw = resp.read()
         if resp.headers.get("Content-Encoding") == "gzip":
             raw = gzip.GzipFile(fileobj=io.BytesIO(raw)).read()
     return raw.decode("utf-8", errors="replace")
+
+
+def fetch_via_curl(url, timeout=25):
+    """
+    Fetch using the system curl instead of urllib.
+
+    Some bot-protection vendors fingerprint the TLS handshake (JA3), which no
+    amount of HTTP header tuning changes. curl presents a different TLS stack
+    from Python's, so it sometimes gets through where urllib does not.
+    Returns None if curl is unavailable or fails.
+    """
+    base = ["curl", "-sS", "--compressed", "--max-time", str(timeout), "-A", UA]
+    for k, v in BROWSER_HEADERS.items():
+        base += ["-H", "{}: {}".format(k, v)]
+
+    # Prefer HTTP/2 (browsers use it, and the protocol version is itself part
+    # of the fingerprint), but not every libcurl build supports the flag.
+    for extra in (["--http2"], []):
+        try:
+            out = subprocess.run(base + extra + [url],
+                                 capture_output=True, timeout=timeout + 10)
+        except (OSError, subprocess.SubprocessError):
+            return None
+        if out.returncode == 0 and out.stdout:
+            return out.stdout.decode("utf-8", errors="replace")
+        # Exit code 2 means curl rejected an option; retry without it.
+        if out.returncode != 2:
+            return None
+    return None
 
 
 # --------------------------------------------------------------------------
@@ -170,13 +222,38 @@ def check_walmart(target):
     usItemId matches the URL, so a recommended or related product further
     down the page cannot trigger a false in-stock alert.
 
-    Best-effort overall: the page sits behind PerimeterX, which may block
-    datacenter IPs (including GitHub Actions runners).
+    Best-effort overall: the page sits behind PerimeterX, which blocks
+    datacenter IPs (including GitHub Actions runners). We try three fetch
+    strategies before giving up, since the block is inconsistent.
     """
-    html = fetch(target["url"])
+    html = None
+    attempts = [
+        ("browser-headers", lambda: fetch(target["url"], browser_like=True)),
+        ("plain", lambda: fetch(target["url"])),
+        ("curl", lambda: fetch_via_curl(target["url"])),
+    ]
+    last = "no attempt succeeded"
+    for name, attempt in attempts:
+        try:
+            candidate = attempt()
+        except Exception as e:
+            last = "{}: {}".format(name, e)
+            continue
+        if not candidate:
+            last = "{}: empty response".format(name)
+            continue
+        if re.search(r"(px-captcha|Robot or human|blocked because we believe)",
+                     candidate, re.I):
+            last = "{}: PerimeterX challenge".format(name)
+            continue
+        if "__NEXT_DATA__" not in candidate:
+            last = "{}: no __NEXT_DATA__".format(name)
+            continue
+        html = candidate
+        break
 
-    if re.search(r"(px-captcha|Robot or human|blocked because we believe)", html, re.I):
-        raise ValueError("blocked by Walmart bot check (PerimeterX)")
+    if html is None:
+        raise ValueError("blocked by Walmart bot check ({})".format(last))
 
     m = re.search(r'<script id="__NEXT_DATA__"[^>]*>(.*?)</script>', html, re.S)
     if not m:
