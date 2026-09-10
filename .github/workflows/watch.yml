@@ -11,6 +11,10 @@ on:
         description: "Check everything but send no notifications"
         type: boolean
         default: false
+      diagnose:
+        description: "Probe Walmart fetch strategies and print what came back"
+        type: boolean
+        default: false
 
 # Never let two checks run at once and fight over state.json.
 concurrency:
@@ -27,9 +31,14 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
+
+      - name: Fetch diagnostics
+        if: ${{ inputs.diagnose }}
+        run: python3 zelda_watch.py --diagnose
 
       - name: Run stock check
+        if: ${{ !inputs.diagnose }}
         env:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
           DRY_RUN: ${{ inputs.dry_run && '1' || '' }}
@@ -38,6 +47,7 @@ jobs:
       - name: Save state
         # state.json only changes when something meaningful changed, so this
         # commits on real transitions rather than once every five minutes.
+        if: ${{ !inputs.diagnose }}
         run: |
           if [[ -n "$(git status --porcelain state.json)" ]]; then
             git config user.name  "zelda-watch-bot"

@@ -98,7 +98,9 @@ def fetch_via_curl(url, timeout=25):
     from Python's, so it sometimes gets through where urllib does not.
     Returns None if curl is unavailable or fails.
     """
-    base = ["curl", "-sS", "--compressed", "--max-time", str(timeout), "-A", UA]
+    # -L matters: urllib follows redirects by default and curl does not, so
+    # without it curl silently returns an empty redirect body.
+    base = ["curl", "-sSL", "--compressed", "--max-time", str(timeout), "-A", UA]
     for k, v in BROWSER_HEADERS.items():
         base += ["-H", "{}: {}".format(k, v)]
 
@@ -232,28 +234,30 @@ def check_walmart(target):
         ("plain", lambda: fetch(target["url"])),
         ("curl", lambda: fetch_via_curl(target["url"])),
     ]
-    last = "no attempt succeeded"
+    notes = []
     for name, attempt in attempts:
         try:
             candidate = attempt()
         except Exception as e:
-            last = "{}: {}".format(name, e)
+            notes.append("{}: {}".format(name, e))
             continue
         if not candidate:
-            last = "{}: empty response".format(name)
+            notes.append("{}: empty response".format(name))
             continue
         if re.search(r"(px-captcha|Robot or human|blocked because we believe)",
                      candidate, re.I):
-            last = "{}: PerimeterX challenge".format(name)
+            notes.append("{}: PerimeterX challenge".format(name))
             continue
         if "__NEXT_DATA__" not in candidate:
-            last = "{}: no __NEXT_DATA__".format(name)
+            notes.append("{}: no __NEXT_DATA__ ({}b)".format(name, len(candidate)))
             continue
         html = candidate
         break
 
+    # Report every strategy, not just the last: knowing which ones got a
+    # challenge versus a redirect is what makes this debuggable from CI logs.
     if html is None:
-        raise ValueError("blocked by Walmart bot check ({})".format(last))
+        raise ValueError("Walmart unreachable [{}]".format("; ".join(notes)))
 
     m = re.search(r'<script id="__NEXT_DATA__"[^>]*>(.*?)</script>', html, re.S)
     if not m:
@@ -383,17 +387,86 @@ def load_json(path, default):
         return default
 
 
+def _describe(text):
+    """Summarise a fetched page for diagnostics."""
+    if not text:
+        return "empty"
+    title = re.search(r"<title[^>]*>(.*?)</title>", text, re.S | re.I)
+    bits = [
+        "{}b".format(len(text)),
+        "title={!r}".format(re.sub(r"\s+", " ", title.group(1)).strip()[:70])
+        if title else "no-title",
+    ]
+    if re.search(r"(px-captcha|Robot or human|blocked because we believe)", text, re.I):
+        bits.append("PERIMETERX-CHALLENGE")
+    bits.append("NEXT_DATA" if "__NEXT_DATA__" in text else "no-NEXT_DATA")
+    return " ".join(bits)
+
+
+def run_diagnostics(cfg):
+    """
+    Probe each fetch strategy against the Walmart targets and print what came
+    back. Run with --diagnose; intended for debugging blocks from CI, where
+    the runner's IP behaves differently from a home connection.
+    """
+    log("=== fetch diagnostics ===")
+    targets = [t for t in cfg.get("targets", []) if t.get("source") == "walmart"]
+    if not targets:
+        log("no walmart targets configured")
+        return
+
+    for t in targets[:1]:
+        url = t["url"]
+        log("target: {}".format(url))
+
+        for label, browser in (("urllib-plain", False), ("urllib-browser", True)):
+            try:
+                req = urllib.request.Request(url)
+                headers = BROWSER_HEADERS if browser else {"Accept": HTML_ACCEPT}
+                for k, v in headers.items():
+                    req.add_header(k, v)
+                req.add_header("User-Agent", UA)
+                with urllib.request.urlopen(req, timeout=25) as resp:
+                    raw = resp.read()
+                    status, final = resp.status, resp.geturl()
+                text = raw.decode("utf-8", errors="replace")
+                log("  {:16} HTTP {} -> {}".format(label, status, final))
+                log("  {:16} {}".format("", _describe(text)))
+            except Exception as e:
+                log("  {:16} EXCEPTION {}".format(label, e))
+
+        try:
+            probe = subprocess.run(
+                ["curl", "-sSL", "--compressed", "--max-time", "25", "-A", UA,
+                 "-o", os.devnull,
+                 "-w", "http_code=%{http_code} redirects=%{num_redirects} final=%{url_effective}",
+                 url],
+                capture_output=True, timeout=40)
+            log("  {:16} {}".format("curl-trace", probe.stdout.decode("utf-8", "replace").strip()
+                                    or probe.stderr.decode("utf-8", "replace").strip()[:200]))
+        except Exception as e:
+            log("  {:16} EXCEPTION {}".format("curl-trace", e))
+
+        body = fetch_via_curl(url)
+        log("  {:16} {}".format("curl-body", _describe(body)))
+
+
 def main():
     topic = os.environ.get("NTFY_TOPIC", "").strip()
     dry_run = os.environ.get("DRY_RUN", "").strip() == "1"
 
-    if not topic and not dry_run:
-        log("ERROR: NTFY_TOPIC is not set. Add it as a GitHub Actions secret.")
-        return 2
-
     cfg = load_json(CONFIG_PATH, None)
     if cfg is None:
         log("ERROR: config.json missing or invalid")
+        return 2
+
+    # Diagnostics need no topic and touch no state.
+    if "--diagnose" in sys.argv:
+        run_diagnostics(cfg)
+        return 0
+
+    if not topic and not dry_run:
+        log("ERROR: NTFY_TOPIC is not set. Add it as a GitHub Actions secret.")
         return 2
     state = load_json(STATE_PATH, {})
     server = cfg.get("ntfy_server", "https://ntfy.sh")
