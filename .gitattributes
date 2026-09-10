@@ -1,0 +1,2 @@
+# The Actions runner is Linux; keep LF in everything it executes.
+* text=auto eol=lf
