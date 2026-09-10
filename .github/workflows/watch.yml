@@ -1,0 +1,56 @@
+name: Zelda 40th stock watch
+
+on:
+  schedule:
+    # Every 5 minutes. This is the fastest GitHub allows for scheduled
+    # workflows, and under load GitHub can still delay a run by 5-15 minutes.
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Check everything but send no notifications"
+        type: boolean
+        default: false
+
+# Never let two checks run at once and fight over state.json.
+concurrency:
+  group: zelda-watch
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Run stock check
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          DRY_RUN: ${{ inputs.dry_run && '1' || '' }}
+        run: python3 zelda_watch.py
+
+      - name: Save state
+        # state.json only changes when something meaningful changed, so this
+        # commits on real transitions rather than once every five minutes.
+        run: |
+          if [[ -n "$(git status --porcelain state.json)" ]]; then
+            git config user.name  "zelda-watch-bot"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add state.json
+            git commit -m "Update stock state [skip ci]"
+            # Another run may have pushed while we were checking.
+            for i in 1 2 3; do
+              git pull --rebase --autostash && git push && exit 0
+              sleep 5
+            done
+            echo "Could not push state after 3 attempts" >&2
+            exit 1
+          else
+            echo "No state change."
+          fi

@@ -1,0 +1,91 @@
+{
+  "_comment": "Targets to watch. Set enabled:false to mute one without deleting it.",
+
+  "ntfy_server": "https://ntfy.sh",
+
+  "discovery": {
+    "enabled": true,
+    "sitemap": "https://www.nintendo.com/en-ca/store/sitemap.xml",
+    "_comment": "Alerts when a NEW product URL appears on the Nintendo CA store matching these patterns. This is how we catch Nintendo-CA-exclusive collectibles whose URLs don't exist yet.",
+    "must_match_any": [
+      "zelda",
+      "hyrule",
+      "triforce",
+      "ocarina"
+    ],
+    "and_must_match_any": [
+      "40th",
+      "anniversary",
+      "pro-controller",
+      "carrying-case",
+      "amiibo",
+      "collector",
+      "special-edition",
+      "pin-set",
+      "art-book",
+      "artbook",
+      "soundtrack",
+      "121642",
+      "switch-2"
+    ],
+    "ignore_containing": [
+      "-upgrade-pack-",
+      "digital-download"
+    ]
+  },
+
+  "targets": [
+    {
+      "id": "nintendo-ca-console",
+      "enabled": true,
+      "source": "nintendo",
+      "label": "Switch 2 Zelda 40th Console (Nintendo CA)",
+      "url": "https://www.nintendo.com/en-ca/store/products/nintendo-switch-2-the-legend-of-zelda-40th-anniversary-edition-121642/"
+    },
+    {
+      "id": "bestbuy-ca-console",
+      "enabled": true,
+      "source": "bestbuy",
+      "label": "Switch 2 Zelda 40th Console (Best Buy CA)",
+      "sku": "20149861",
+      "url": "https://www.bestbuy.ca/en-ca/product/20149861"
+    },
+    {
+      "id": "bestbuy-ca-procontroller",
+      "enabled": true,
+      "source": "bestbuy",
+      "label": "Zelda 40th Pro Controller (Best Buy CA)",
+      "sku": "20149830",
+      "url": "https://www.bestbuy.ca/en-ca/product/20149830"
+    },
+    {
+      "id": "bestbuy-ca-case",
+      "enabled": true,
+      "source": "bestbuy",
+      "label": "Zelda 40th Carrying Case + Screen Protector (Best Buy CA)",
+      "sku": "20149880",
+      "url": "https://www.bestbuy.ca/en-ca/product/20149880"
+    },
+    {
+      "id": "amazon-ca-console",
+      "enabled": true,
+      "source": "amazon",
+      "label": "Switch 2 Zelda 40th Console (Amazon.ca)",
+      "url": "https://www.amazon.ca/dp/B0HJ6F8L6V"
+    },
+    {
+      "id": "walmart-ca-console",
+      "enabled": true,
+      "source": "walmart",
+      "label": "Switch 2 Zelda 40th Console (Walmart.ca)",
+      "url": "https://www.walmart.ca/en/ip/Nintendo-Switch-2-The-Legend-of-Zelda-40th-Anniversary-Edition/4LPRUXHD1MMQ"
+    },
+    {
+      "id": "walmart-ca-procontroller",
+      "enabled": true,
+      "source": "walmart",
+      "label": "Zelda 40th Pro Controller (Walmart.ca)",
+      "url": "https://www.walmart.ca/en/ip/Nintendo-Switch-2-Pro-Controller-The-Legend-of-Zelda-40th-Anniversary-Edition/3CVEAW67GHIT"
+    }
+  ]
+}
