@@ -3,8 +3,8 @@
 
   "ntfy_server": "https://ntfy.sh",
 
-  "_heartbeat": "Send a quiet all-clear push this often (hours), so silence is trustworthy. Set to 0 to disable.",
-  "heartbeat_hours": 24,
+  "_heartbeat": "Send a quiet all-clear push this often (hours), so silence is trustworthy. 6 keeps you blind for at most 6h if the bot dies; raise to 12 or 24 if it feels noisy, or 0 to disable.",
+  "heartbeat_hours": 6,
 
   "discovery": {
     "enabled": true,

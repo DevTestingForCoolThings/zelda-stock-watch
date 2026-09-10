@@ -425,6 +425,34 @@ def load_json(path, default):
         return default
 
 
+def count_recent_runs(since_iso):
+    """
+    Count workflow runs since a timestamp, via the public Actions API.
+
+    Turns the heartbeat into a real health report: it says whether the
+    schedule is actually firing at the expected rate, which is the one thing
+    the bot cannot otherwise observe about itself. Best-effort - returns None
+    if the repo is unknown or the API is unreachable.
+    """
+    repo = os.environ.get("GITHUB_REPOSITORY", "").strip()
+    if not repo or not since_iso:
+        return None
+    try:
+        # The API's own `created=>DATE` filter returns 0 for valid ranges here,
+        # so fetch the recent page and filter client-side instead. 100 runs
+        # covers any heartbeat interval up to ~8h at a 5-minute cadence.
+        url = ("https://api.github.com/repos/{}/actions/runs"
+               "?per_page=100".format(repo))
+        data = json.loads(fetch(url, timeout=20, accept="application/vnd.github+json"))
+        since = datetime.fromisoformat(since_iso)
+        return sum(
+            1 for r in data.get("workflow_runs", [])
+            if datetime.fromisoformat(r["created_at"].replace("Z", "+00:00")) > since
+        )
+    except Exception:
+        return None
+
+
 def _describe(text):
     """Summarise a fetched page for diagnostics."""
     if not text:
@@ -647,6 +675,16 @@ def main():
             body = "Still watching. Nothing buyable yet.\n\n" + "\n".join(ok)
             if broken:
                 body += "\n\nNot working:\n" + "\n".join(broken)
+
+            # Report the actual check rate against what the schedule promises,
+            # so a silently throttled or stalled cron is visible.
+            ran = count_recent_runs(last_hb)
+            if ran is not None:
+                expected = int(hb_hours * 60 / 5)
+                body += "\n\n{} checks in the last {}h (expected ~{}).".format(
+                    ran, hb_hours, expected)
+                if ran < expected * 0.5:
+                    body += " GitHub is running this far less often than scheduled."
             alerts.append((
                 "Zelda watcher still alive", body, "min", "hourglass_flowing_sand",
                 "https://github.com/DevTestingForCoolThings/zelda-stock-watch/actions",
