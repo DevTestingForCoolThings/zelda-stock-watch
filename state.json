@@ -73,8 +73,8 @@
       "warned_broken": false
     },
     "ebgames-ca-console": {
-      "fails": 1,
-      "last_error": "HTTP Error 429: Too Many Requests"
+      "fails": 2,
+      "last_error": "HTTP Error 403: Forbidden"
     },
     "nintendo-ca-console": {
       "buyable": false,
