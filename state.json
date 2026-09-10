@@ -46,8 +46,8 @@
   "last_heartbeat": "2026-09-10T19:12:02+00:00",
   "targets": {
     "amazon-ca-console": {
-      "buyable": true,
-      "detail": "This item will be released on October 29, 2026.",
+      "buyable": false,
+      "detail": "Currently unavailable.",
       "fails": 0,
       "last_alerted": "2026-09-10T21:36:33+00:00",
       "last_error": null,
