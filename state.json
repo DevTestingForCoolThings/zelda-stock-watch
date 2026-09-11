@@ -47,7 +47,7 @@
   "targets": {
     "amazon-ca-console": {
       "buyable": false,
-      "detail": "Currently unavailable.",
+      "detail": "no add-to-cart",
       "fails": 0,
       "last_alerted": "2026-09-10T21:36:33+00:00",
       "last_error": null,
