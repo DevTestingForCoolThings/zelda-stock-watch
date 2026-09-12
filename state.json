@@ -51,8 +51,8 @@
     "https://www.nintendo.com/en-ca/store/products/the-legend-of-zelda-tears-of-the-kingdom-the-complete-official-guide-collectors-edition-120014/",
     "https://www.nintendo.com/en-ca/store/products/zelda-loftwing-the-legend-of-zelda-skyward-sword-hd-amiibo/"
   ],
-  "last_discovery": "2026-09-12T04:49:49+00:00",
-  "last_heartbeat": "2026-09-12T00:27:32+00:00",
+  "last_discovery": "2026-09-12T08:52:56+00:00",
+  "last_heartbeat": "2026-09-12T08:53:28+00:00",
   "targets": {
     "amazon-ca-console": {
       "buyable": false,
@@ -96,8 +96,8 @@
       "warned_broken": false
     },
     "nintendo-ca-console": {
-      "buyable": true,
-      "detail": "isSalableQty=True schema=InStock $709.99 - pre-order open, ships 2026-10-29",
+      "buyable": false,
+      "detail": "isSalableQty=False schema=OutOfStock $709.99",
       "fails": 0,
       "last_alerted": "2026-09-12T04:50:07+00:00",
       "last_error": null,
