@@ -313,9 +313,27 @@ was sent.
 
 ---
 
-## Being a good citizen
+## Being a good citizen (and not getting blocked)
 
 `nintendo.com/robots.txt` allows general crawling (`User-agent: *` / `Allow: /`).
-A run fetches a handful of product pages and two sitemaps, comparable to
-leaving a few tabs open. Please do not trigger runs more often than every 5
-minutes; that is how IP ranges end up blocked for everyone.
+The watcher is deliberately slow anyway:
+
+- **Request spacing.** At least `politeness.request_spacing_seconds` (default 3)
+  between two requests to the same site within a run.
+- **Rate limits are obeyed.** If a site answers `429 Too Many Requests` (or `503`
+  with a `Retry-After`), the watcher stops contacting it for as long as the site
+  asked, or `politeness.default_cooldown_minutes` (default 30) if it didn't say.
+  That pause is saved in `state.json`, so later runs respect it too. It does
+  **not** retry with a different client, because ignoring a rate limit is how a
+  temporary slowdown becomes a long block. A paused store shows as "paused"
+  in the heartbeat and does not trigger the "source broken" alert.
+- **Discovery runs hourly**, not on every check, because it downloads two ~6 MB
+  sitemaps. Change it with `discovery.every_minutes`. Known products are still
+  checked on every run.
+- **Local runs are guarded.** Running the script on your own computer refuses a
+  second run within 5 minutes unless you pass `--force`, so an accidental loop
+  can't get your home connection rate-limited.
+
+Scheduled runs happen on GitHub's servers, so your home IP is only involved
+when you run the script yourself. Please don't trigger runs more often than
+every 5 minutes.

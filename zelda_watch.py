@@ -71,8 +71,79 @@ BROWSER_HEADERS = {
 }
 
 
+# --------------------------------------------------------------------------
+# Politeness: per-host spacing and rate-limit cooldowns
+#
+# Every request goes through polite_wait(), which spaces requests to the same
+# host and refuses to contact a host that recently rate-limited us. A 429 (or a
+# 503 carrying Retry-After) puts that host on cooldown for as long as it asked,
+# or DEFAULT_COOLDOWN_MINUTES if it did not say. Cooldowns are saved in
+# state.json so later runs respect them too. Sites that rate-limit an IP tend
+# to escalate to longer blocks if the client keeps knocking, so the only safe
+# response is to go quiet - not to retry with a different client.
+# --------------------------------------------------------------------------
+
+REQUEST_SPACING_SECONDS = 3.0
+DEFAULT_COOLDOWN_MINUTES = 30
+
+_last_request = {}   # host -> time.monotonic() of its last request this run
+_cooldowns = {}      # host -> unix time before which it must not be contacted
+
+
+class RateLimited(Exception):
+    """A host asked us to slow down, or is still on cooldown from doing so."""
+
+
+def apply_politeness(cfg):
+    """Take spacing and cooldown settings from config.json, if present."""
+    global REQUEST_SPACING_SECONDS, DEFAULT_COOLDOWN_MINUTES
+    p = cfg.get("politeness") or {}
+    REQUEST_SPACING_SECONDS = float(p.get("request_spacing_seconds", REQUEST_SPACING_SECONDS))
+    DEFAULT_COOLDOWN_MINUTES = float(p.get("default_cooldown_minutes", DEFAULT_COOLDOWN_MINUTES))
+
+
+def _host(url):
+    return (urllib.parse.urlsplit(url).hostname or "").lower()
+
+
+def _paused(host):
+    # Deliberately stable across runs (an absolute time, not "N min left"), so
+    # a paused target does not rewrite state.json - and commit - every run.
+    until = datetime.fromtimestamp(_cooldowns[host], timezone.utc)
+    return RateLimited("{} rate-limited us; paused until {} UTC".format(
+        host, until.strftime("%Y-%m-%d %H:%M")))
+
+
+def polite_wait(url):
+    """Call before every request: enforces cooldowns and per-host spacing."""
+    host = _host(url)
+    if _cooldowns.get(host, 0) > time.time():
+        raise _paused(host)
+    last = _last_request.get(host)
+    if last is not None:
+        gap = REQUEST_SPACING_SECONDS - (time.monotonic() - last)
+        if gap > 0:
+            time.sleep(gap)
+    _last_request[host] = time.monotonic()
+
+
+def note_rate_limit(url, retry_after=None, code=429):
+    """Put the host on cooldown, then raise RateLimited."""
+    seconds = int(DEFAULT_COOLDOWN_MINUTES * 60)
+    if retry_after and str(retry_after).strip().isdigit():
+        # Honour the server within sane bounds. The HTTP-date form of
+        # Retry-After is rare for these sites and falls back to the default.
+        seconds = min(max(int(str(retry_after).strip()), 60), 6 * 3600)
+    host = _host(url)
+    _cooldowns[host] = int(time.time()) + seconds
+    log("  !! {} answered HTTP {}; leaving it alone for {} min".format(
+        host, code, seconds // 60))
+    raise _paused(host)
+
+
 def fetch(url, timeout=25, accept=HTML_ACCEPT, browser_like=False):
-    """GET a URL, returning decoded text. Raises on failure."""
+    """GET a URL politely, returning decoded text. Raises on failure."""
+    polite_wait(url)
     req = urllib.request.Request(url)
     if browser_like:
         for k, v in BROWSER_HEADERS.items():
@@ -83,10 +154,16 @@ def fetch(url, timeout=25, accept=HTML_ACCEPT, browser_like=False):
         req.add_header("Cache-Control", "no-cache")
     req.add_header("User-Agent", UA)
     req.add_header("Accept-Encoding", "gzip, identity")
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
-        raw = resp.read()
-        if resp.headers.get("Content-Encoding") == "gzip":
-            raw = gzip.GzipFile(fileobj=io.BytesIO(raw)).read()
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            raw = resp.read()
+            if resp.headers.get("Content-Encoding") == "gzip":
+                raw = gzip.GzipFile(fileobj=io.BytesIO(raw)).read()
+    except urllib.error.HTTPError as e:
+        retry_after = e.headers.get("Retry-After") if e.headers else None
+        if e.code == 429 or (e.code == 503 and retry_after):
+            note_rate_limit(url, retry_after, e.code)
+        raise
     return raw.decode("utf-8", errors="replace")
 
 
@@ -108,13 +185,18 @@ def fetch_via_curl(url, timeout=25):
     # Prefer HTTP/2 (browsers use it, and the protocol version is itself part
     # of the fingerprint), but not every libcurl build supports the flag.
     for extra in (["--http2"], []):
+        polite_wait(url)
         try:
-            out = subprocess.run(base + extra + [url],
-                                 capture_output=True, timeout=timeout + 10)
+            out = subprocess.run(
+                base + extra + ["-w", "\\n__HTTP_STATUS__%{http_code}", url],
+                capture_output=True, timeout=timeout + 10)
         except (OSError, subprocess.SubprocessError):
             return None
-        if out.returncode == 0 and out.stdout:
-            return out.stdout.decode("utf-8", errors="replace")
+        body, _, status = out.stdout.rpartition(b"\n__HTTP_STATUS__")
+        if status.strip() == b"429":
+            note_rate_limit(url, code=429)
+        if out.returncode == 0 and body:
+            return body.decode("utf-8", errors="replace")
         # Exit code 2 means curl rejected an option; retry without it.
         if out.returncode != 2:
             return None
@@ -147,6 +229,10 @@ def fetch_with_fallbacks(url, required_marker):
     for name, attempt in attempts:
         try:
             candidate = attempt()
+        except RateLimited:
+            # The host asked us to back off. Trying another client would be
+            # ignoring that, so stop here.
+            raise
         except Exception as e:
             notes.append("{}: {}".format(name, e))
             continue
@@ -471,6 +557,9 @@ def discover_nintendo_ca(cfg, state):
         url = NINTENDO_PRODUCT_URL.format(region, slug)
         try:
             html = fetch(url, timeout=20)
+        except RateLimited as e:
+            log("discovery: {}".format(e))
+            break
         except urllib.error.HTTPError as e:
             if e.code != 404:
                 log("discovery: probe {} -> HTTP {}".format(slug, e.code))
@@ -625,6 +714,7 @@ def run_diagnostics(cfg):
 
         for label, browser in (("urllib-plain", False), ("urllib-browser", True)):
             try:
+                polite_wait(url)
                 req = urllib.request.Request(url)
                 headers = BROWSER_HEADERS if browser else {"Accept": HTML_ACCEPT}
                 for k, v in headers.items():
@@ -640,6 +730,7 @@ def run_diagnostics(cfg):
                 out("  {:16} EXCEPTION {}".format(label, e))
 
         try:
+            polite_wait(url)
             probe = subprocess.run(
                 ["curl", "-sSL", "--compressed", "--max-time", "25", "-A", UA,
                  "-o", os.devnull,
@@ -686,7 +777,9 @@ def self_test(cfg):
     Run the real Nintendo checker against items configured as normally in stock.
 
     Returns (passed, label, detail, url) for the first item detected as
-    buyable, or (False, None, summary_of_attempts, None). A pass proves the
+    buyable; (None, None, reason, None) if Nintendo is rate-limiting us, since
+    that says nothing about detection; otherwise (False, None,
+    summary_of_attempts, None). A pass proves the
     positive path: the checker recognises a genuinely buyable item. Checking
     only that out-of-stock items read as out of stock proves nothing, and is
     exactly how the 2026-09-10 miss went unnoticed.
@@ -696,6 +789,8 @@ def self_test(cfg):
     for url in urls:
         try:
             buyable, detail = check_nintendo({"url": url})
+        except RateLimited as e:
+            return None, None, str(e), None
         except Exception as e:
             tried.append("{}: error {}".format(_label_from_url(url), e))
             continue
@@ -703,6 +798,55 @@ def self_test(cfg):
             return True, _label_from_url(url), detail, url
         tried.append("{}: {}".format(_label_from_url(url), detail))
     return False, None, "; ".join(tried) or "no self_test urls configured", None
+
+
+def discovery_due(disc, state):
+    """
+    Discovery downloads two ~6 MB sitemaps, so it runs at most every
+    `every_minutes` (default 60) instead of on every check. Known products
+    are still stock-checked on every run.
+    """
+    if not disc.get("enabled"):
+        return False
+    every = disc.get("every_minutes", 60)
+    last = state.get("last_discovery")
+    if last:
+        try:
+            age = (datetime.now(timezone.utc)
+                   - datetime.fromisoformat(last)).total_seconds()
+            if age < every * 60:
+                return False
+        except (ValueError, TypeError):
+            pass
+    state["last_discovery"] = now_iso()
+    return True
+
+
+LOCAL_MIN_MINUTES = 5
+
+
+def local_run_allowed():
+    """
+    Protect a home connection from accidental rapid re-runs.
+
+    Never blocks on GitHub Actions. Locally, refuses to start if the script
+    ran from this folder less than LOCAL_MIN_MINUTES ago, unless --force.
+    """
+    if os.environ.get("GITHUB_ACTIONS") == "true" or "--force" in sys.argv:
+        return True
+    stamp = os.path.join(os.path.dirname(STATE_PATH), ".last_local_run")
+    try:
+        age = time.time() - os.path.getmtime(stamp)
+        if age < LOCAL_MIN_MINUTES * 60:
+            log("Not running: the last local run was {}s ago. Leave {} minutes "
+                "between local runs so your home connection is not rate "
+                "limited, or pass --force.".format(int(age), LOCAL_MIN_MINUTES))
+            return False
+    except OSError:
+        pass
+    with open(stamp, "w", encoding="utf-8") as f:
+        f.write(now_iso())
+    return True
 
 
 def main():
@@ -713,6 +857,10 @@ def main():
     if cfg is None:
         log("ERROR: config.json missing or invalid")
         return 2
+
+    apply_politeness(cfg)
+    if not local_run_allowed():
+        return 3
 
     # Diagnostics need no topic and touch no state.
     if "--diagnose" in sys.argv:
@@ -737,6 +885,15 @@ def main():
     # Touches no state.
     if "--self-test" in sys.argv:
         passed, label, detail, url = self_test(cfg)
+        if passed is None:
+            send([(
+                "SELF-TEST SKIPPED",
+                "Nintendo is rate-limiting this connection, so the test could "
+                "not run. Try again later.\n\n" + detail,
+                "default", "hourglass", actions_url(),
+            )])
+            log("self-test SKIPPED: {}".format(detail))
+            return 1
         if passed:
             title, body, prio, tags, click = stock_alert(label, detail, url)
             send([(
@@ -758,6 +915,8 @@ def main():
         return 1
 
     state = load_json(STATE_PATH, {})
+    _cooldowns.update({h: t for h, t in (state.get("cooldowns") or {}).items()
+                       if t > time.time()})
     statuses = state.setdefault("targets", {})
     alerts = []   # (title, body, priority, tags, click)
     disc = cfg.get("discovery") or {}
@@ -766,8 +925,11 @@ def main():
     # Runs first, so a product discovered this run is also stock-checked
     # this run rather than five minutes (or on GitHub, hours) later.
     try:
-        new_urls = discover_nintendo_ca(cfg, state)
-        state.pop("discovery_last_error", None)
+        if discovery_due(disc, state):
+            new_urls = discover_nintendo_ca(cfg, state)
+            state.pop("discovery_last_error", None)
+        else:
+            new_urls = []
     except Exception as e:
         new_urls = []
         log("discovery: ERROR ({})".format(e))
@@ -817,6 +979,12 @@ def main():
 
         try:
             buyable, detail = checker(t)
+        except RateLimited as e:
+            # Not a breakage: the store asked us to slow down and we are
+            # complying, so it does not count toward the "source broken" alert.
+            st["last_error"] = str(e)[:300]
+            log("{}: PAUSED ({})".format(tid, e))
+            continue
         except Exception as e:
             fails = st.get("fails", 0) + 1
             st["fails"] = fails
@@ -888,6 +1056,8 @@ def main():
                 if passed:
                     body += ("\n\nSelf-test OK: detection confirmed on an "
                              "in-stock item ({}).".format(st_label))
+                elif passed is None:
+                    body += "\n\nSelf-test skipped: {}".format(st_detail)
                 else:
                     body += "\n\nSelf-test FAILED - see the separate alert."
                     alerts.append((
@@ -916,6 +1086,13 @@ def main():
 
     # ---- 4. Send ---------------------------------------------------------
     send(alerts)
+
+    # Persist cooldowns so the next run keeps respecting them.
+    live = {h: int(t) for h, t in _cooldowns.items() if t > time.time()}
+    if live:
+        state["cooldowns"] = live
+    else:
+        state.pop("cooldowns", None)
 
     with open(STATE_PATH, "w", encoding="utf-8") as f:
         json.dump(state, f, indent=2, sort_keys=True)

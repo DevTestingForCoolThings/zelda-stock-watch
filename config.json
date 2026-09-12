@@ -6,6 +6,12 @@
   "_heartbeat": "Send a quiet all-clear push this often (hours), so silence is trustworthy. 6 keeps you blind for at most 6h if the bot dies; raise to 12 or 24 if it feels noisy, or 0 to disable.",
   "heartbeat_hours": 6,
 
+  "politeness": {
+    "_comment": "Minimum seconds between two requests to the same site, and how long to leave a site alone after it rate-limits us (HTTP 429) if it does not say how long.",
+    "request_spacing_seconds": 3,
+    "default_cooldown_minutes": 30
+  },
+
   "self_test": {
     "_comment": "Nintendo items that are normally in stock. 'Run workflow' with self_test ticked checks these with the real Nintendo checker and sends a real push through the real alert path, proving detection works end to end. The heartbeat also re-checks them every time. Only one needs to be in stock for the test to pass.",
     "urls": [
@@ -25,6 +31,7 @@
       "https://www.nintendo.com/us/store/sitemap.xml"
     ],
     "auto_watch": true,
+    "every_minutes": 60,
     "must_match_any": [
       "zelda",
       "hyrule",
