@@ -1,4 +1,9 @@
 {
+  "auto_watch": [
+    "https://www.nintendo.com/en-ca/store/products/nintendo-switch-2-carrying-case-screen-protector-the-legend-of-zelda-40th-anniversary-edition-127073/",
+    "https://www.nintendo.com/en-ca/store/products/nintendo-switch-2-pro-controller-display-stand-the-legend-of-zelda-40th-anniversary-edition-127076/",
+    "https://www.nintendo.com/en-ca/store/products/nintendo-switch-2-pro-controller-the-legend-of-zelda-40th-anniversary-edition-127074/"
+  ],
   "discovered": [
     "https://www.nintendo.com/en-ca/store/products/amiibo-bokoblin-the-legend-of-zelda-breath-of-the-wild-series-104670/",
     "https://www.nintendo.com/en-ca/store/products/amiibo-daruk-the-legend-of-zelda-breath-of-the-wild-series-106337/",
@@ -29,6 +34,9 @@
     "https://www.nintendo.com/en-ca/store/products/amiibo-zelda-the-legend-of-zelda-wind-waker-series-120627/",
     "https://www.nintendo.com/en-ca/store/products/hyrule-warriors-age-of-calamity-definitive-edition-switch-2/",
     "https://www.nintendo.com/en-ca/store/products/hyrule-warriors-age-of-imprisonment-switch-2/",
+    "https://www.nintendo.com/en-ca/store/products/nintendo-switch-2-carrying-case-screen-protector-the-legend-of-zelda-40th-anniversary-edition-127073/",
+    "https://www.nintendo.com/en-ca/store/products/nintendo-switch-2-pro-controller-display-stand-the-legend-of-zelda-40th-anniversary-edition-127076/",
+    "https://www.nintendo.com/en-ca/store/products/nintendo-switch-2-pro-controller-the-legend-of-zelda-40th-anniversary-edition-127074/",
     "https://www.nintendo.com/en-ca/store/products/nintendo-switch-2-the-legend-of-zelda-40th-anniversary-edition-121642/",
     "https://www.nintendo.com/en-ca/store/products/nintendo-switch-2-the-legend-of-zelda-tears-of-the-kingdom-nintendo-switch-2-edition-121505/",
     "https://www.nintendo.com/en-ca/store/products/nintendo-switch-carrying-case-screen-protector-the-legend-of-zelda-tears-of-the-kingdom-edition-117074/",
@@ -43,6 +51,7 @@
     "https://www.nintendo.com/en-ca/store/products/the-legend-of-zelda-tears-of-the-kingdom-the-complete-official-guide-collectors-edition-120014/",
     "https://www.nintendo.com/en-ca/store/products/zelda-loftwing-the-legend-of-zelda-skyward-sword-hd-amiibo/"
   ],
+  "last_discovery": "2026-09-12T04:49:49+00:00",
   "last_heartbeat": "2026-09-12T00:27:32+00:00",
   "targets": {
     "amazon-ca-console": {
@@ -78,9 +87,32 @@
       "fails": 3,
       "last_error": "all fetch strategies failed [browser-headers: HTTP Error 403: Forbidden; plain: HTTP Error 403: Forbidden; curl: no schema.org (5384b)]"
     },
+    "nintendo-ca-case": {
+      "buyable": true,
+      "detail": "isSalableQty=True schema=InStock $49.99 - pre-order open, ships 2026-10-29",
+      "fails": 0,
+      "last_alerted": "2026-09-12T04:50:15+00:00",
+      "last_error": null,
+      "warned_broken": false
+    },
     "nintendo-ca-console": {
+      "buyable": true,
+      "detail": "isSalableQty=True schema=InStock $709.99 - pre-order open, ships 2026-10-29",
+      "fails": 0,
+      "last_alerted": "2026-09-12T04:50:07+00:00",
+      "last_error": null,
+      "warned_broken": false
+    },
+    "nintendo-ca-procontroller": {
       "buyable": false,
-      "detail": "OutOfStock (Nintendo CA shows 'Find retailers', not sold direct)",
+      "detail": "isSalableQty=False schema=OutOfStock $124.99",
+      "fails": 0,
+      "last_error": null,
+      "warned_broken": false
+    },
+    "nintendo-ca-procontroller-stand": {
+      "buyable": false,
+      "detail": "isSalableQty=False schema=OutOfStock $139.99",
       "fails": 0,
       "last_error": null,
       "warned_broken": false
