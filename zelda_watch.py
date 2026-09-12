@@ -175,27 +175,91 @@ def fetch_with_fallbacks(url, required_marker):
 BUYABLE_SCHEMA = {"InStock", "PreOrder", "BackOrder", "LimitedAvailability", "OnlineOnly"}
 
 
+def _nintendo_sku(url):
+    """Physical Nintendo store items end in a numeric SKU: .../some-name-121642/"""
+    m = re.search(r"-(\d{5,})/?$", url)
+    return m.group(1) if m else None
+
+
+def _nintendo_product(html, sku):
+    """
+    Return the product node for `sku` from the page's __NEXT_DATA__, or None.
+
+    The page carries several product nodes (related items, bundles), so the
+    node is matched on the SKU from the URL rather than taken positionally.
+    """
+    m = re.search(r'<script id="__NEXT_DATA__"[^>]*>(.*?)</script>', html, re.S)
+    if not m or not sku:
+        return None
+    try:
+        data = json.loads(m.group(1))
+    except ValueError:
+        return None
+    stack = [data]
+    while stack:
+        node = stack.pop()
+        if isinstance(node, dict):
+            if str(node.get("sku")) == sku and "isSalableQty" in node:
+                return node
+            stack.extend(node.values())
+        elif isinstance(node, list):
+            stack.extend(node)
+    return None
+
+
 def check_nintendo(target):
-    """Nintendo CA product page. Server-rendered, exposes JSON-LD availability."""
+    """
+    Nintendo store product page (any region; server-rendered).
+
+    Primary signal: `isSalableQty` on the product's own __NEXT_DATA__ node,
+    which is what drives the Add to cart button. Secondary: schema.org
+    availability in the JSON-LD. The two agreed on all 17 items sampled in
+    September 2026, in stock and out.
+
+    Deliberately NOT used: the presence of "Find retailers" or "Add to cart"
+    text. Add to cart is rendered client-side and never appears in the server
+    HTML, and Find retailers is a secondary link shown even on items Nintendo
+    sells directly. An earlier version treated "Find retailers without Add to
+    cart" as "not sold direct", which suppressed a real InStock reading on
+    the Zelda console on 2026-09-10 and missed the restock.
+    """
     html = fetch(target["url"])
 
     m = re.search(r'"availability"\s*:\s*"https?://schema\.org/(\w+)"', html)
-    if not m:
-        raise ValueError("no schema.org availability found (page layout changed?)")
-    status = m.group(1)
+    schema = m.group(1) if m else None
+    product = _nintendo_product(html, _nintendo_sku(target["url"]))
 
-    # Nintendo CA lists some hardware it does not sell directly, showing a
-    # "Find retailers" button instead of a cart. Surface that distinction.
-    has_cart = bool(re.search(r"Add to cart", html, re.I))
-    only_retailers = bool(re.search(r"Find retailers", html, re.I)) and not has_cart
+    if product is None:
+        # Games and pages without a numeric SKU have no product node to
+        # match; fall back to schema.org alone.
+        if schema is None:
+            raise ValueError("no availability signal found (page layout changed?)")
+        return schema in BUYABLE_SCHEMA, "{} (schema.org only)".format(schema)
 
-    buyable = status in BUYABLE_SCHEMA and not only_retailers
-    detail = status
-    if only_retailers:
-        detail += " (Nintendo CA shows 'Find retailers', not sold direct)"
-    elif has_cart:
-        detail += " (Add to cart present)"
-    return buyable, detail
+    salable = bool(product.get("isSalableQty"))
+    schema_buyable = schema in BUYABLE_SCHEMA if schema else None
+
+    price = None
+    for k, v in product.items():
+        if k.startswith("prices") and isinstance(v, dict):
+            price = v.get("finalPrice")
+            break
+
+    detail = "isSalableQty={} schema={}".format(salable, schema or "none")
+    if price:
+        detail += " ${}".format(price)
+    # Unreleased items are sold as pre-orders ("Pre-purchase" button). They are
+    # genuinely buyable, so they alert, but the push should say what it is.
+    if salable and product.get("prePurchase"):
+        detail += " - pre-order open, ships {}".format(
+            product.get("startShippingDate") or "on release")
+
+    # For a restock bot a missed drop costs far more than a spurious push, so
+    # if the two signals ever disagree, alert and say so.
+    if schema_buyable is not None and schema_buyable != salable:
+        detail += " (signals disagree - alerting to be safe)"
+        return True, detail
+    return salable, detail
 
 
 def check_ebgames(target):
@@ -339,49 +403,97 @@ DIAGNOSABLE = ("ebgames", "walmart", "amazon", "nintendo")
 # Nintendo CA new-product discovery
 # --------------------------------------------------------------------------
 
+# Cap on direct page probes per run, so discovery stays polite however many
+# foreign-only products happen to match the keyword filters.
+MAX_DISCOVERY_PROBES = 15
+
+NINTENDO_PRODUCT_URL = "https://www.nintendo.com/{}/store/products/{}/"
+
+
+def _product_slug(url):
+    m = re.search(r"/store/products/([^/?#<\s]+)", url)
+    return m.group(1) if m else None
+
+
 def discover_nintendo_ca(cfg, state):
     """
-    Scan the Nintendo CA store sitemap for product URLs matching our keywords.
-    Anything never seen before is reported as a brand-new listing. This is how
-    Nintendo-CA-exclusive collectibles get caught before they have a known URL.
+    Find matching Nintendo store pages in our region that we have never seen.
+
+    Two inputs, because the Canadian sitemap alone proved unreliable: in
+    September 2026 the Zelda 40th Pro Controllers (127074, 127076) and the
+    carrying case (127073) were live on en-ca while absent from the CA sitemap,
+    though the US sitemap listed them. So every sitemap in `sitemaps` is
+    scanned, and a matching product seen only in another region's sitemap is
+    probed on our region directly. It counts as discovered once that page
+    actually exists with product data.
     """
     d = cfg.get("discovery") or {}
     if not d.get("enabled"):
         return []
 
-    xml = fetch(d["sitemap"], timeout=60, accept="application/xml,text/xml,*/*")
-    urls = re.findall(r"<loc>\s*([^<\s]+/store/products/[^<\s]+)\s*</loc>", xml)
-    if not urls:
-        raise ValueError("sitemap returned no product URLs")
-
+    region = d.get("region", "en-ca")
+    sitemaps = d.get("sitemaps") or [d["sitemap"]]
     must = [s.lower() for s in d.get("must_match_any", [])]
     also = [s.lower() for s in d.get("and_must_match_any", [])]
     skip = [s.lower() for s in d.get("ignore_containing", [])]
 
-    matched = []
-    for u in urls:
-        lu = u.lower()
-        if any(s in lu for s in skip):
-            continue
-        if must and not any(s in lu for s in must):
-            continue
-        if also and not any(s in lu for s in also):
-            continue
-        matched.append(u)
+    def wanted(slug):
+        s = slug.lower()
+        if any(x in s for x in skip):
+            return False
+        if must and not any(x in s for x in must):
+            return False
+        return not also or any(x in s for x in also)
 
-    matched = sorted(set(matched))
-    seen = state.get("discovered") or []
+    local, foreign = set(), set()
+    read = 0
+    for sm in sitemaps:
+        try:
+            xml = fetch(sm, timeout=60, accept="application/xml,text/xml,*/*")
+        except Exception as e:
+            log("discovery: could not read {} ({})".format(sm, e))
+            continue
+        read += 1
+        for u in re.findall(r"<loc>\s*([^<\s]+/store/products/[^<\s]+)\s*</loc>", xml):
+            slug = _product_slug(u)
+            if slug and wanted(slug):
+                (local if "/{}/".format(region) in u else foreign).add(slug)
+    if not read:
+        raise ValueError("no sitemap could be read")
+
+    seen = set(state.get("discovered") or [])
+    found = {NINTENDO_PRODUCT_URL.format(region, s) for s in local}
+
+    # Products listed only abroad: check whether our region has the page yet.
+    candidates = [s for s in sorted(foreign - local)
+                  if NINTENDO_PRODUCT_URL.format(region, s) not in seen]
+    for slug in candidates[:MAX_DISCOVERY_PROBES]:
+        url = NINTENDO_PRODUCT_URL.format(region, slug)
+        try:
+            html = fetch(url, timeout=20)
+        except urllib.error.HTTPError as e:
+            if e.code != 404:
+                log("discovery: probe {} -> HTTP {}".format(slug, e.code))
+            continue
+        except Exception as e:
+            log("discovery: probe {} failed ({})".format(slug, e))
+            continue
+        has_product = (_nintendo_product(html, _nintendo_sku(url)) is not None
+                       or "schema.org/" in html)
+        if has_product:
+            found.add(url)
 
     # First ever run: record a baseline silently rather than alerting on
     # every product that already exists.
     if not seen:
-        state["discovered"] = matched
-        log("discovery: baseline recorded ({} matching products)".format(len(matched)))
+        state["discovered"] = sorted(found)
+        log("discovery: baseline recorded ({} matching products)".format(len(found)))
         return []
 
-    new = [u for u in matched if u not in seen]
-    state["discovered"] = sorted(set(seen) | set(matched))
-    log("discovery: {} matching, {} new".format(len(matched), len(new)))
+    new = sorted(found - seen)
+    state["discovered"] = sorted(seen | found)
+    log("discovery: {} matching in {} ({} via other regions probed), {} new".format(
+        len(found), region, min(len(candidates), MAX_DISCOVERY_PROBES), len(new)))
     return new
 
 
@@ -545,6 +657,54 @@ def run_diagnostics(cfg):
     finish()
 
 
+def actions_url():
+    """Link for pushes about the bot itself: this repo's Actions tab."""
+    repo = os.environ.get("GITHUB_REPOSITORY", "").strip()
+    return "https://github.com/{}/actions".format(repo) if repo else ""
+
+
+def stock_alert(label, detail, url):
+    """
+    Build the in-stock push. The one place it is built, shared by real alerts
+    and the self-test, so a passing self-test exercises the exact path a real
+    restock takes.
+    """
+    return (
+        "IN STOCK: " + label,
+        "{}\n\nStatus: {}\n\nGo buy it now:\n{}".format(label, detail, url),
+        "max", "rotating_light,shopping_cart", url,
+    )
+
+
+def _label_from_url(url):
+    slug = re.sub(r"-\d{5,}$", "", _product_slug(url) or url)
+    return slug.replace("-", " ").strip().title()
+
+
+def self_test(cfg):
+    """
+    Run the real Nintendo checker against items configured as normally in stock.
+
+    Returns (passed, label, detail, url) for the first item detected as
+    buyable, or (False, None, summary_of_attempts, None). A pass proves the
+    positive path: the checker recognises a genuinely buyable item. Checking
+    only that out-of-stock items read as out of stock proves nothing, and is
+    exactly how the 2026-09-10 miss went unnoticed.
+    """
+    urls = (cfg.get("self_test") or {}).get("urls") or []
+    tried = []
+    for url in urls:
+        try:
+            buyable, detail = check_nintendo({"url": url})
+        except Exception as e:
+            tried.append("{}: error {}".format(_label_from_url(url), e))
+            continue
+        if buyable:
+            return True, _label_from_url(url), detail, url
+        tried.append("{}: {}".format(_label_from_url(url), detail))
+    return False, None, "; ".join(tried) or "no self_test urls configured", None
+
+
 def main():
     topic = os.environ.get("NTFY_TOPIC", "").strip()
     dry_run = os.environ.get("DRY_RUN", "").strip() == "1"
@@ -562,16 +722,91 @@ def main():
     if not topic and not dry_run:
         log("ERROR: NTFY_TOPIC is not set. Add it as a GitHub Actions secret.")
         return 2
-    state = load_json(STATE_PATH, {})
     server = cfg.get("ntfy_server", "https://ntfy.sh")
 
+    def send(batch):
+        if dry_run:
+            log("DRY_RUN: would send {} notification(s)".format(len(batch)))
+            for a in batch:
+                log("  [{}] {}".format(a[2], a[0]))
+            return
+        for title, body, prio, tags, click in batch:
+            notify(topic, server, title, body, prio, tags, click)
+
+    # Self-test: known-good case through the real checker and real alert path.
+    # Touches no state.
+    if "--self-test" in sys.argv:
+        passed, label, detail, url = self_test(cfg)
+        if passed:
+            title, body, prio, tags, click = stock_alert(label, detail, url)
+            send([(
+                "SELF-TEST " + title,
+                "This is a test. The watcher checked an item that is in stock "
+                "right now and detected it correctly, so a real restock will "
+                "arrive exactly like this.\n\n" + body,
+                prio, tags, click,
+            )])
+            log("self-test PASSED: {} | {}".format(label, detail))
+            return 0
+        send([(
+            "SELF-TEST FAILED",
+            "None of the items that are normally in stock were detected as "
+            "buyable, so real restocks may be missed.\n\n" + detail,
+            "high", "warning", actions_url(),
+        )])
+        log("self-test FAILED: {}".format(detail))
+        return 1
+
+    state = load_json(STATE_PATH, {})
     statuses = state.setdefault("targets", {})
     alerts = []   # (title, body, priority, tags, click)
+    disc = cfg.get("discovery") or {}
 
-    # ---- 1. Known product watchlist -------------------------------------
-    for t in cfg.get("targets", []):
-        if not t.get("enabled", True):
-            continue
+    # ---- 1. Nintendo new-listing discovery ------------------------------
+    # Runs first, so a product discovered this run is also stock-checked
+    # this run rather than five minutes (or on GitHub, hours) later.
+    try:
+        new_urls = discover_nintendo_ca(cfg, state)
+        state.pop("discovery_last_error", None)
+    except Exception as e:
+        new_urls = []
+        log("discovery: ERROR ({})".format(e))
+        state["discovery_last_error"] = str(e)[:300]
+    for u in new_urls[:10]:
+        alerts.append((
+            "NEW on Nintendo CA",
+            "A new matching product page just appeared on the Nintendo "
+            "store:\n\n{}\n\n{}{}".format(
+                _label_from_url(u), u,
+                "\n\nIt is now being stock-watched automatically."
+                if disc.get("auto_watch") else ""),
+            "high", "sparkles,new", u,
+        ))
+    if len(new_urls) > 10:
+        alerts.append((
+            "NEW on Nintendo CA",
+            "{} more new matching products appeared. Check the store.".format(
+                len(new_urls) - 10),
+            "high", "sparkles", "https://www.nintendo.com/en-ca/store/",
+        ))
+    if disc.get("auto_watch"):
+        auto = state.setdefault("auto_watch", [])
+        auto.extend(u for u in new_urls if u not in auto)
+
+    # ---- 2. Watchlist: configured targets plus auto-watched discoveries --
+    watch = [t for t in cfg.get("targets", []) if t.get("enabled", True)]
+    configured = {t.get("url", "").rstrip("/") for t in cfg.get("targets", [])}
+    if disc.get("auto_watch"):
+        for u in state.get("auto_watch", []):
+            if u.rstrip("/") not in configured:
+                watch.append({
+                    "id": "auto:" + (_product_slug(u) or u),
+                    "source": "nintendo",
+                    "label": _label_from_url(u) + " (Nintendo, auto-watched)",
+                    "url": u,
+                })
+
+    for t in watch:
         tid = t["id"]
         label = t.get("label", tid)
         st = statuses.setdefault(tid, {})
@@ -613,37 +848,9 @@ def main():
         # per drop rather than one every five minutes.
         if buyable and was is not True:
             st["last_alerted"] = now_iso()
-            alerts.append((
-                "IN STOCK: " + label,
-                "{}\n\nStatus: {}\n\nGo buy it now:\n{}".format(
-                    label, detail, t.get("url", "")),
-                "max", "rotating_light,shopping_cart",
-                t.get("url", ""),
-            ))
+            alerts.append(stock_alert(label, detail, t.get("url", "")))
         elif was is True and not buyable:
             log("  (went out of stock again)")
-
-    # ---- 2. Nintendo CA new-listing discovery ---------------------------
-    try:
-        new_urls = discover_nintendo_ca(cfg, state)
-        for u in new_urls[:10]:
-            name = u.rstrip("/").rsplit("/", 1)[-1].replace("-", " ")
-            alerts.append((
-                "NEW on Nintendo CA",
-                "A new matching product page just appeared on the Nintendo "
-                "Canada store:\n\n{}\n\n{}".format(name, u),
-                "high", "sparkles,new", u,
-            ))
-        if len(new_urls) > 10:
-            alerts.append((
-                "NEW on Nintendo CA",
-                "{} more new matching products appeared. Check the store.".format(
-                    len(new_urls) - 10),
-                "high", "sparkles", "https://www.nintendo.com/en-ca/store/",
-            ))
-    except Exception as e:
-        log("discovery: ERROR ({})".format(e))
-        state["discovery_last_error"] = str(e)[:300]
 
     # ---- 3. Heartbeat ----------------------------------------------------
     # Without this, "no notifications" is ambiguous: it could mean nothing is
@@ -663,18 +870,34 @@ def main():
         if due:
             state["last_heartbeat"] = now_iso()
             ok, broken = [], []
-            for t in cfg.get("targets", []):
-                if not t.get("enabled", True):
-                    continue
+            for t in watch:
                 st = statuses.get(t["id"], {})
                 label = t.get("label", t["id"])
                 if st.get("last_error"):
                     broken.append("x {} - {}".format(label, st["last_error"][:60]))
                 else:
                     ok.append("- {}: {}".format(label, st.get("detail", "?")))
-            body = "Still watching. Nothing buyable yet.\n\n" + "\n".join(ok)
+            body = "Still watching.\n\n" + "\n".join(ok)
             if broken:
                 body += "\n\nNot working:\n" + "\n".join(broken)
+
+            # Re-prove the positive path every heartbeat: an all-clear only
+            # means something if the bot can still recognise an in-stock item.
+            if (cfg.get("self_test") or {}).get("urls"):
+                passed, st_label, st_detail, _ = self_test(cfg)
+                if passed:
+                    body += ("\n\nSelf-test OK: detection confirmed on an "
+                             "in-stock item ({}).".format(st_label))
+                else:
+                    body += "\n\nSelf-test FAILED - see the separate alert."
+                    alerts.append((
+                        "Self-test failed",
+                        "The heartbeat re-checked items that are normally in "
+                        "stock and none read as buyable. Either they all sold "
+                        "out at once, or detection is broken and real restocks "
+                        "would be missed.\n\n" + st_detail,
+                        "high", "warning", actions_url(),
+                    ))
 
             # Report the actual check rate against what the schedule promises,
             # so a silently throttled or stalled cron is visible.
@@ -684,21 +907,15 @@ def main():
                 body += "\n\n{} checks in the last {}h (expected ~{}).".format(
                     ran, hb_hours, expected)
                 if ran < expected * 0.5:
-                    body += " GitHub is running this far less often than scheduled."
+                    body += (" GitHub is running this far less often than "
+                             "scheduled; see 'Reliable scheduling' in the README.")
             alerts.append((
                 "Zelda watcher still alive", body, "min", "hourglass_flowing_sand",
-                "https://github.com/DevTestingForCoolThings/zelda-stock-watch/actions",
+                actions_url(),
             ))
 
     # ---- 4. Send ---------------------------------------------------------
-
-    if dry_run:
-        log("DRY_RUN: would send {} notification(s)".format(len(alerts)))
-        for a in alerts:
-            log("  [{}] {}".format(a[2], a[0]))
-    else:
-        for title, body, prio, tags, click in alerts:
-            notify(topic, server, title, body, prio, tags, click)
+    send(alerts)
 
     with open(STATE_PATH, "w", encoding="utf-8") as f:
         json.dump(state, f, indent=2, sort_keys=True)

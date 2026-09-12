@@ -1,11 +1,14 @@
 # Zelda 40th Anniversary Stock Watcher (Canada)
 
-Watches Canadian retailers for the **Nintendo Switch 2 – The Legend of Zelda 40th
-Anniversary Edition** console, Pro Controller and accessories, and pushes a
-notification to your phone the moment something becomes buyable.
+Watches Canadian stores for the **Nintendo Switch 2 – The Legend of Zelda 40th
+Anniversary Edition** console, Pro Controllers and accessories, and pushes a
+notification to your phone the moment something becomes buyable. It also
+spots new Zelda products the first time they appear on the Nintendo Canada
+store, and starts watching them automatically.
 
-Runs on GitHub Actions, so your computer does not need to be on. No API key, no
-account beyond GitHub, no dependencies.
+Runs on GitHub Actions, so your computer does not need to be on. No
+dependencies (Python standard library only) and no accounts beyond GitHub:
+notifications go through [ntfy](https://ntfy.sh), which needs no sign-up.
 
 **Notify-only.** It will never add to cart or check out for you. You get a push
 with a tappable link and you buy it yourself.
@@ -14,41 +17,67 @@ with a tappable link and you buy it yourself.
 
 ## What it watches
 
-| Source | What it reads | Status from GitHub Actions |
+| Product | Nintendo CA | Best Buy CA | Amazon.ca |
+|---|:---:|:---:|:---:|
+| Switch 2 – Zelda 40th Anniversary console | ✅ | ✅ | ✅ |
+| Zelda 40th Pro Controller | ✅ | ✅ | |
+| Zelda 40th Pro Controller + display stand (Nintendo exclusive) | ✅ | | |
+| Zelda 40th carrying case + screen protector | ✅ | ✅ | |
+| Any new Zelda product that appears on Nintendo CA | ✅ auto | | |
+
+### How each store is read
+
+| Source | Signal | Status from GitHub Actions |
 |---|---|---|
-| Nintendo CA | `schema.org/availability` in the product page | ✅ Working — server-rendered, no bot protection |
-| Best Buy CA | `ecomm-api/availability` JSON endpoint | ✅ Working — clean public JSON |
+| Nintendo (any region) | `isSalableQty` on the product's own `__NEXT_DATA__` node, cross-checked with `schema.org/availability` | ✅ Working |
+| Best Buy CA | `ecomm-api/availability` JSON endpoint | ✅ Working |
 | Amazon.ca | add-to-cart / `#outOfStock` markers | ✅ Working |
-| EB Games CA | `schema.org/availability` in the product page | ❌ **Disabled** — 403 from datacenter IPs (Akamai) |
-| Walmart.ca | `__NEXT_DATA__` product node | ❌ **Disabled** — blocked from datacenter IPs |
+| EB Games CA | `schema.org/availability` | ❌ Disabled: 403 from datacenter IPs (Akamai) |
+| Walmart.ca | `__NEXT_DATA__` product node | ❌ Disabled: PerimeterX blocks datacenter IPs |
 
-### Why Walmart and EB Games are disabled
+**Nintendo**: `isSalableQty` is the flag that drives the store's Add to cart
+button. It was checked against schema.org on 17 products in September 2026, in
+stock and out, and agreed every time. If the two ever disagree, the watcher
+alerts anyway and says so in the notification, because for a restock bot a
+missed drop costs far more than one spurious push.
 
-Both are blocked from GitHub-s runner IP range. Walmart sits behind PerimeterX;
-EB Games behind Akamai, which returns a flat 403. For Walmart, all
-three fetch strategies (plain, browser headers, curl) get redirected to
-`walmart.ca/blocked?...` with a "Verify Your Identity" challenge page.
+Pre-orders count as buyable. Unreleased items show a **Pre-purchase** button
+instead of Add to cart; they alert like anything else, with
+`pre-order open, ships <date>` in the notification so you know what you're buying.
 
-Two different TLS stacks and three header profiles producing an identical result
-means the block keys on **IP reputation**, not client fingerprint — so no
-client-side change fixes it. Getting through would need a residential proxy,
-which means a paid service and an API key.
+Two things on Nintendo pages look like stock signals but are not, and the
+watcher deliberately ignores them:
 
-The code and config entries are kept (just `"enabled": false`) so it can be
-re-tested at any time with a diagnose run. Walmart works fine from a home
-connection, so running this script locally still checks it.
+- **"Add to cart"** is rendered in the browser, so it never appears in the page
+  the server sends, even for items that are in stock.
+- **"Find retailers"** is a secondary link shown *next to* Add to cart on items
+  Nintendo sells directly. It does not mean "not sold here".
 
-Plus **new-listing discovery**: every run it scans the Nintendo Canada store
-sitemap for product URLs matching Zelda/40th keywords. When Nintendo CA adds an
-exclusive collectible, you get a push the first time its page exists — before
-it has a URL anyone could have put on a watchlist.
+An earlier version relied on those two strings and missed a real console restock
+as a result. See [What went wrong on 10 September 2026](#what-went-wrong-on-10-september-2026).
 
-### Note on Nintendo Canada and the console
+**Walmart and EB Games** block GitHub's runner IP range. For Walmart, three
+fetch strategies (plain, browser headers, curl) all get redirected to
+`walmart.ca/blocked?...`. Two TLS stacks and three header profiles producing the
+same result means the block keys on **IP reputation**, which no client-side
+change fixes. Their config entries are kept with `"enabled": false`, so a
+diagnose run can re-test them, and both still work when the script runs from a
+home connection.
 
-Nintendo CA currently shows **"Find retailers"** for the console rather than a
-cart button — they are not selling it directly. The watcher understands this and
-will not report it as in stock just because the page exists. If Nintendo CA ever
-opens direct sales, the button changes and you get alerted.
+### New-listing discovery
+
+Every run scans the **Canadian and US** Nintendo store sitemaps for product URLs
+matching the Zelda keywords in `config.json`. Anything matching that is listed
+only in the US sitemap is checked on the Canadian store directly, and it counts
+as discovered once the Canadian page exists.
+
+The second sitemap is there because the Canadian one lags. In September 2026 the
+Zelda Pro Controllers and carrying case were live on the Canadian store for days
+while missing from its sitemap, even though the US sitemap listed them.
+
+With `"auto_watch": true`, every newly discovered product is then stock-checked
+on every run. That means you are told when it **appears**, and again when it
+becomes **buyable**.
 
 ---
 
@@ -60,70 +89,105 @@ Install **ntfy** (free, no account): [iOS](https://apps.apple.com/app/ntfy/id162
 [Android](https://play.google.com/store/apps/details?id=io.heckel.ntfy)
 
 In the app, tap **+** and subscribe to a topic name. **Your topic name is your
-password** — anyone who knows it can read your alerts, so make it long and
+password**: anyone who knows it can read your alerts, so make it long and
 random, not `zelda`. For example:
 
 ```
 zelda-ca-watch-x7k2m9qp4v
 ```
 
-### 2. Create the GitHub repo
+### 2. Fork or create the repo
 
-Make it **public** — see the cost warning below.
-
-```bash
-git init && git add . && git commit -m "Zelda stock watcher"
-git branch -M main
-git remote add origin https://github.com/YOUR-USERNAME/YOUR-REPO.git
-git push -u origin main
-```
+Make it **public**. See [the cost note](#keep-the-repo-public).
 
 ### 3. Add your topic as a secret
 
 In the repo: **Settings → Secrets and variables → Actions → New repository secret**
 
 - Name: `NTFY_TOPIC`
-- Value: your topic name (just the name, not the full URL)
+- Value: your topic name only (not the `https://ntfy.sh/...` URL)
 
-Secrets are not visible to anyone browsing a public repo, and this script never
-prints the topic to the logs.
+Use the **Secrets** tab, not **Variables**: variables are visible to anyone
+reading a public repo. The script never prints the topic to the logs.
 
-### 4. Turn it on and test
+### 4. Run the self-test
 
-Go to the **Actions** tab and enable workflows if prompted. Then run
-**Zelda 40th stock watch → Run workflow** manually. Check the log — you should
-see a status line per product. If something is in stock, your phone buzzes.
+Go to **Actions → Zelda 40th stock watch → Run workflow**, tick **Self-test**,
+and run it. Within a minute your phone should show:
 
-To test the notification path end to end without waiting for a drop, run this
-with your own topic:
+> **SELF-TEST IN STOCK: Nintendo Switch 2 Pro Controller**
 
-```bash
-curl -H "Title: Test" -d "If you can see this, alerts work." ntfy.sh/YOUR-TOPIC-HERE
-```
+This checks a few Nintendo items that are normally in stock (`self_test.urls` in
+`config.json`), using the real checker and the real alert path. If it arrives,
+detection **and** delivery both work. If none of those items read as in stock,
+you get **SELF-TEST FAILED** and the job fails, so a broken checker cannot pass
+unnoticed.
+
+The heartbeat repeats the self-test every time it runs, so the all-clear you
+receive every few hours also confirms detection still works.
+
+### 5. Make the schedule reliable
+
+Do this step. See [Reliable scheduling](#reliable-scheduling).
 
 ---
 
-## Important: keep the repo public, or slow the schedule down
+## Reliable scheduling
 
-GitHub Actions is **free and unlimited on public repositories**. On a **private**
-repo the Free plan gives you **2,000 minutes/month**, and every job is billed as
-a minimum of one full minute.
+The workflow asks GitHub to run every 5 minutes. **In practice GitHub ran it
+every 2 to 4 hours**: 14 scheduled runs in 46 hours on this repo in September
+2026. GitHub documents that scheduled workflows can be delayed or dropped under
+load, and a restock that sells out in an hour can fall entirely between two
+runs.
 
-At the default 5-minute cadence that is about **8,600 runs a month** — roughly
-four times the private-repo allowance. So either:
+The fix is to trigger the workflow from outside on a real timer. GitHub's API
+can start a workflow run on request; a free cron service can make that request
+every 5 minutes.
 
-- **Keep the repo public** (recommended — nothing sensitive is in it), or
-- Make it private and change the cron in `.github/workflows/watch.yml` to
-  `*/30 * * * *` (every 30 minutes, ~1,440 runs/month, fits the free tier).
+**1. Create a narrowly scoped GitHub token**
 
-Two other GitHub scheduling facts worth knowing:
+GitHub → your avatar → **Settings → Developer settings → Personal access tokens →
+Fine-grained tokens → Generate new token**
 
-- `*/5` is the **fastest** schedule GitHub allows, and under load GitHub can
-  still delay a scheduled run by 5–15 minutes. For a hyped drop that sells out in
-  90 seconds, this bot improves your odds but cannot guarantee a catch.
-- GitHub **disables scheduled workflows after 60 days without repo activity**.
-  The bot commits `state.json` whenever stock changes, which usually counts, but
-  if things go quiet for two months, push any commit to re-arm it.
+- **Resource owner**: the account or organisation that owns the repo
+- **Repository access**: *Only select repositories* → this repo
+- **Permissions → Repository → Actions**: *Read and write*
+- **Expiration**: pick a date and put a reminder in your calendar
+
+That token can start this one workflow and nothing else. If the owner is an
+organisation, its settings may need to allow fine-grained tokens first.
+
+**2. Create a job on [cron-job.org](https://cron-job.org)** (free)
+
+| Field | Value |
+|---|---|
+| URL | `https://api.github.com/repos/OWNER/REPO/actions/workflows/watch.yml/dispatches` |
+| Schedule | every 5 minutes |
+| Request method | `POST` |
+| Header | `Authorization: Bearer YOUR_TOKEN` |
+| Header | `Accept: application/vnd.github+json` |
+| Header | `X-GitHub-Api-Version: 2022-11-28` |
+| Request body | `{"ref":"main"}` |
+
+A successful call returns **HTTP 204**. Runs then appear in the Actions tab as
+`workflow_dispatch` every 5 minutes, and the heartbeat's
+`N checks in the last 6h (expected ~72)` line should read close to 72.
+
+The GitHub schedule stays in place as a backstop. Overlapping runs are
+prevented by the workflow's `concurrency` group.
+
+---
+
+## Keep the repo public
+
+GitHub Actions is **free and unlimited on public repositories**. On a private
+repo the Free plan gives **2,000 minutes/month** and bills each job as at least a
+minute; a 5-minute cadence is about 8,600 runs a month. Nothing sensitive is in
+the repo (the topic lives in Secrets), so public is the simple choice.
+
+GitHub also **disables scheduled workflows after 60 days without repo
+activity**. The heartbeat commits state every few hours, which keeps the repo
+active.
 
 ---
 
@@ -131,7 +195,22 @@ Two other GitHub scheduling facts worth knowing:
 
 Edit `config.json` and add an entry to `targets`.
 
-**Best Buy** (easiest — find the SKU in the product URL):
+**Nintendo store** (any region; paste the product page URL):
+
+```json
+{
+  "id": "nintendo-ca-something",
+  "enabled": true,
+  "source": "nintendo",
+  "label": "Human readable name",
+  "url": "https://www.nintendo.com/en-ca/store/products/some-product-123456/"
+}
+```
+
+Physical items end in a numeric SKU, which the checker uses to find the right
+product on the page. Pages without one (digital games) fall back to schema.org.
+
+**Best Buy CA** (the SKU is the number in the product URL):
 
 ```json
 {
@@ -150,38 +229,35 @@ To find a Best Buy SKU by name:
 curl -s "https://www.bestbuy.ca/api/v2/json/search?query=zelda%2040th&lang=en-CA" | grep -o '"sku":"[0-9]*","name":"[^"]*"'
 ```
 
-For `nintendo`, `amazon` and `walmart`, use `"source"` plus the product `"url"` —
-no SKU needed.
+**Amazon.ca / Walmart.ca / EB Games**: `"source"` plus the product `"url"`.
 
 Set `"enabled": false` to mute a target without deleting it.
 
-### Widening discovery
+### Tuning discovery
 
 `discovery.must_match_any` and `and_must_match_any` are substring filters against
-the product URL. A URL must match **at least one from each list**. Loosen them to
-catch more, tighten to reduce noise.
+the product URL's slug. A product must match **at least one entry from each
+list**. `ignore_containing` excludes anything containing those substrings.
+`region` is the store to watch, and `sitemaps` lists which sitemaps to scan.
 
 ---
 
 ## Diagnosing a blocked source
 
-If a source starts failing, run the workflow manually with the **diagnose**
-checkbox ticked. It probes one target per HTML-fetched source using three fetch
-strategies and reports HTTP status, redirect chain, final URL, page title and
-block markers — then commits the result to `diagnostics.txt` so you can read it
-without digging through Actions logs.
+If a source starts failing, run the workflow with **diagnose** ticked. It
+probes one target per HTML source with three fetch strategies and reports HTTP
+status, redirects, final URL, page title and block markers, then commits the
+result to `diagnostics.txt` so you can read it without opening the Actions logs.
 
-Disabled targets are probed too, so you can re-test Walmart without editing
-config. Locally:
+Disabled targets are probed too. Locally:
 
 ```bash
 python3 zelda_watch.py --diagnose
 ```
 
-Reading the output: a redirect to a `/blocked` URL means IP-reputation blocking
-(not fixable client-side). A 403 means the same. A 200 with a small body and
-`no-NEXT_DATA` means a JavaScript challenge. A 429 means you are being rate
-limited — back off rather than retrying.
+Reading the output: a redirect to a `/blocked` URL or a 403 means IP-reputation
+blocking (not fixable client-side). A 200 with a small body and `no-NEXT_DATA`
+means a JavaScript challenge. A 429 means you are being rate limited, so back off.
 
 ## Running it locally
 
@@ -191,29 +267,55 @@ Needs Python 3 (standard library only):
 DRY_RUN=1 python3 zelda_watch.py
 ```
 
-`DRY_RUN=1` checks everything and prints what it *would* send without notifying.
-Drop it and set `NTFY_TOPIC` to actually push.
+`DRY_RUN=1` checks everything and prints what it *would* send. Drop it and set
+`NTFY_TOPIC` to actually push. `python3 zelda_watch.py --self-test` runs the
+self-test.
 
 ---
 
-## How it avoids spamming you
+## How it avoids spamming you, and failing silently
 
-- Alerts fire **only on the transition** into buyable, not every run while stock
-  lasts. One push per drop.
-- Walmart alerts include **price and seller**, so a marketplace reseller at triple
-  MSRP is obvious at a glance.
-- On the very first run, discovery records a silent baseline instead of alerting
-  on all 42 products that already exist.
-- If a source breaks or gets blocked, the other sources keep working, and you get
-  one low-priority heads-up after 6 consecutive failures — so a scraper can never
-  fail *silently* and leave you thinking everything is fine.
+- Alerts fire **only on the transition** into buyable, not every run while
+  stock lasts. One push per drop.
+- The first discovery run records a silent baseline instead of alerting on every
+  product that already exists.
+- If a source breaks or gets blocked, the others keep working, and you get one
+  low-priority heads-up after 6 consecutive failures.
+- The **heartbeat** (every `heartbeat_hours`, default 6) lists every target, re-runs
+  the self-test, and reports how many checks actually ran against how many were
+  scheduled. Silence between heartbeats means "nothing in stock", not "the bot
+  died".
+
+---
+
+## What went wrong on 10 September 2026
+
+The console came back in stock on the Nintendo Canada store and no notification
+was sent.
+
+- **Detected but suppressed.** The run at 16:30 UTC read the console as
+  `InStock`. An earlier version then applied a heuristic: if the page showed
+  "Find retailers" but not "Add to cart", treat the item as not sold direct.
+  "Add to cart" is never in the server HTML and "Find retailers" appears on
+  directly sold items, so that rule suppressed essentially every Nintendo
+  restock. It is gone, replaced by `isSalableQty`, and a regression test replays
+  the exact page shape.
+- **Checked too rarely.** GitHub ran the 5-minute schedule every 2–4 hours. This
+  restock happened to land inside a run, but most would not.
+  [Reliable scheduling](#reliable-scheduling) fixes that.
+- **Missed listings.** The Zelda Pro Controllers and carrying case were live on
+  the Canadian store but absent from its sitemap, so discovery never saw them.
+  Discovery now cross-checks the US sitemap.
+- **Why testing missed it.** The checker had only ever been shown to report
+  out-of-stock items correctly. It was never pointed at an item known to be in
+  stock, which would have exposed the bug on day one. The self-test now does
+  exactly that, on demand and with every heartbeat.
 
 ---
 
 ## Being a good citizen
 
-`nintendo.com/robots.txt` allows general crawling (`User-agent: * / Allow: /`).
-This checks a handful of URLs every few minutes with a normal browser
-User-Agent — comparable to leaving a few tabs open. Please do not drop the
-interval below 5 minutes or add dozens of targets; that is what gets IP ranges
-blocked for everyone.
+`nintendo.com/robots.txt` allows general crawling (`User-agent: *` / `Allow: /`).
+A run fetches a handful of product pages and two sitemaps, comparable to
+leaving a few tabs open. Please do not trigger runs more often than every 5
+minutes; that is how IP ranges end up blocked for everyone.

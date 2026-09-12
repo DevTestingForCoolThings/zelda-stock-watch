@@ -3,11 +3,16 @@ name: Zelda 40th stock watch
 on:
   schedule:
     # Every 5 minutes, offset off the hour boundary (:02, :07, :12...).
-    # GitHub warns that schedules are delayed under load, and load spikes at
-    # :00 and :30 when most crons fire. 5 minutes is the fastest allowed.
+    # In practice GitHub ran this only every 2-4 hours on this repo (14 runs
+    # in 46h, Sept 2026), so treat the schedule as a backstop and trigger
+    # runs externally if restocks need to be caught quickly. See README.
     - cron: "2-59/5 * * * *"
   workflow_dispatch:
     inputs:
+      self_test:
+        description: "Self-test: check Nintendo items known to be in stock and send a real test alert"
+        type: boolean
+        default: false
       dry_run:
         description: "Check everything but send no notifications"
         type: boolean
@@ -34,6 +39,15 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v5
 
+      - name: Self-test (known in-stock item, real notification)
+        # Runs the real Nintendo checker against items that are in stock right
+        # now and sends the result through the real alert path. Fails the job
+        # if no in-stock item is detected. Touches no state.
+        if: ${{ inputs.self_test }}
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+        run: python3 zelda_watch.py --self-test
+
       - name: Fetch diagnostics
         if: ${{ inputs.diagnose }}
         run: python3 zelda_watch.py --diagnose
@@ -49,7 +63,7 @@ jobs:
           git pull --rebase --autostash && git push
 
       - name: Run stock check
-        if: ${{ !inputs.diagnose }}
+        if: ${{ !inputs.diagnose && !inputs.self_test }}
         env:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
           DRY_RUN: ${{ inputs.dry_run && '1' || '' }}
@@ -58,7 +72,7 @@ jobs:
       - name: Save state
         # state.json only changes when something meaningful changed, so this
         # commits on real transitions rather than once every five minutes.
-        if: ${{ !inputs.diagnose }}
+        if: ${{ !inputs.diagnose && !inputs.self_test }}
         run: |
           if [[ -n "$(git status --porcelain state.json)" ]]; then
             git config user.name  "zelda-watch-bot"

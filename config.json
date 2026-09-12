@@ -6,10 +6,25 @@
   "_heartbeat": "Send a quiet all-clear push this often (hours), so silence is trustworthy. 6 keeps you blind for at most 6h if the bot dies; raise to 12 or 24 if it feels noisy, or 0 to disable.",
   "heartbeat_hours": 6,
 
+  "self_test": {
+    "_comment": "Nintendo items that are normally in stock. 'Run workflow' with self_test ticked checks these with the real Nintendo checker and sends a real push through the real alert path, proving detection works end to end. The heartbeat also re-checks them every time. Only one needs to be in stock for the test to pass.",
+    "urls": [
+      "https://www.nintendo.com/en-ca/store/products/nintendo-switch-2-pro-controller-123674/",
+      "https://www.nintendo.com/en-ca/store/products/joy-con-2-blue-light-yellow-127071/",
+      "https://www.nintendo.com/en-ca/store/products/dual-usb-playstand-for-nintendo-switch-2-126527/",
+      "https://www.nintendo.com/en-ca/store/products/amiibo-sidon-the-legend-of-zelda-series-120817/"
+    ]
+  },
+
   "discovery": {
     "enabled": true,
-    "sitemap": "https://www.nintendo.com/en-ca/store/sitemap.xml",
-    "_comment": "Alerts when a NEW product URL appears on the Nintendo CA store matching these patterns. This is how we catch Nintendo-CA-exclusive collectibles whose URLs don't exist yet.",
+    "_comment": "Alerts when a NEW matching product page appears on the Nintendo store in 'region'. Other regions' sitemaps are scanned too, because the CA sitemap lags: products listed only abroad are probed on the CA store directly. Newly discovered products are then stock-watched automatically if auto_watch is true.",
+    "region": "en-ca",
+    "sitemaps": [
+      "https://www.nintendo.com/en-ca/store/sitemap.xml",
+      "https://www.nintendo.com/us/store/sitemap.xml"
+    ],
+    "auto_watch": true,
     "must_match_any": [
       "zelda",
       "hyrule",
@@ -44,6 +59,27 @@
       "source": "nintendo",
       "label": "Switch 2 Zelda 40th Console (Nintendo CA)",
       "url": "https://www.nintendo.com/en-ca/store/products/nintendo-switch-2-the-legend-of-zelda-40th-anniversary-edition-121642/"
+    },
+    {
+      "id": "nintendo-ca-procontroller",
+      "enabled": true,
+      "source": "nintendo",
+      "label": "Zelda 40th Pro Controller (Nintendo CA)",
+      "url": "https://www.nintendo.com/en-ca/store/products/nintendo-switch-2-pro-controller-the-legend-of-zelda-40th-anniversary-edition-127074/"
+    },
+    {
+      "id": "nintendo-ca-procontroller-stand",
+      "enabled": true,
+      "source": "nintendo",
+      "label": "Zelda 40th Pro Controller + Display Stand (Nintendo CA exclusive)",
+      "url": "https://www.nintendo.com/en-ca/store/products/nintendo-switch-2-pro-controller-display-stand-the-legend-of-zelda-40th-anniversary-edition-127076/"
+    },
+    {
+      "id": "nintendo-ca-case",
+      "enabled": true,
+      "source": "nintendo",
+      "label": "Zelda 40th Carrying Case + Screen Protector (Nintendo CA)",
+      "url": "https://www.nintendo.com/en-ca/store/products/nintendo-switch-2-carrying-case-screen-protector-the-legend-of-zelda-40th-anniversary-edition-127073/"
     },
     {
       "id": "bestbuy-ca-console",
