@@ -367,8 +367,8 @@ following `config.example.json` and run `--check-config`.
 
 To carry over which items were already in stock, so the switch doesn't send the
 same alerts again, add a one-time `migrate_from_v1` map of old target ids to
-links. `config.json` in this repo shows an example. Delete it after the first
-run.
+links. The map this repo used is in `tests/fixtures/migrate_from_v1.json`.
+Delete the map after the first run.
 
 ---
 

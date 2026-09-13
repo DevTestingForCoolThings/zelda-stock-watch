@@ -98,19 +98,5 @@
       "soundtrack", "121642", "switch-2"
     ],
     "ignore_containing": ["-upgrade-pack-", "digital-download"]
-  },
-
-  "_migrate_from_v1": "One-time map from the old per-target ids in state.json to links, so switching formats does not re-send alerts. Safe to delete after the first run on this format.",
-  "migrate_from_v1": {
-    "nintendo-ca-console": "https://www.nintendo.com/en-ca/store/products/nintendo-switch-2-the-legend-of-zelda-40th-anniversary-edition-121642/",
-    "nintendo-ca-procontroller": "https://www.nintendo.com/en-ca/store/products/nintendo-switch-2-pro-controller-the-legend-of-zelda-40th-anniversary-edition-127074/",
-    "nintendo-ca-procontroller-stand": "https://www.nintendo.com/en-ca/store/products/nintendo-switch-2-pro-controller-display-stand-the-legend-of-zelda-40th-anniversary-edition-127076/",
-    "nintendo-ca-case": "https://www.nintendo.com/en-ca/store/products/nintendo-switch-2-carrying-case-screen-protector-the-legend-of-zelda-40th-anniversary-edition-127073/",
-    "bestbuy-ca-console": "https://www.bestbuy.ca/en-ca/product/20149861",
-    "bestbuy-ca-procontroller": "https://www.bestbuy.ca/en-ca/product/20149830",
-    "bestbuy-ca-case": "https://www.bestbuy.ca/en-ca/product/20149880",
-    "amazon-ca-console": "https://www.amazon.ca/dp/B0HJ6F8L6V",
-    "walmart-ca-console": "https://www.walmart.ca/en/ip/Nintendo-Switch-2-The-Legend-of-Zelda-40th-Anniversary-Edition/4LPRUXHD1MMQ",
-    "walmart-ca-procontroller": "https://www.walmart.ca/en/ip/Nintendo-Switch-2-Pro-Controller-The-Legend-of-Zelda-40th-Anniversary-Edition/3CVEAW67GHIT"
   }
 }

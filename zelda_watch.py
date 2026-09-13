@@ -430,6 +430,10 @@ def check_amazon(link):
 
     buyable = has_cart and not out_of_stock
     detail = msg or ("add-to-cart present" if has_cart else "no add-to-cart")
+    # Amazon sells unreleased items as pre-orders ("This item will be released
+    # on ..."). They are buyable; say so, so the push reads PRE-ORDER OPEN.
+    if buyable and re.search(r"will be released|pre-?order", msg, re.I):
+        detail = "pre-order open - " + detail
     return buyable, detail[:160]
 
 
