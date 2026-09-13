@@ -55,11 +55,11 @@
   "last_heartbeat": "2026-09-12T23:17:18+00:00",
   "targets": {
     "amazon-ca-console": {
-      "buyable": false,
-      "detail": "Currently unavailable.",
-      "fails": 1,
-      "last_alerted": "2026-09-10T21:36:33+00:00",
-      "last_error": "blocked by Amazon bot check",
+      "buyable": true,
+      "detail": "This item will be released on October 29, 2026.",
+      "fails": 0,
+      "last_alerted": "2026-09-13T02:40:26+00:00",
+      "last_error": null,
       "warned_broken": false
     },
     "bestbuy-ca-case": {
