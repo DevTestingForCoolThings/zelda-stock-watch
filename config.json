@@ -30,7 +30,7 @@
       "links": [
         "https://www.nintendo.com/en-ca/store/products/nintendo-switch-2-the-legend-of-zelda-40th-anniversary-edition-121642/",
         "https://www.bestbuy.ca/en-ca/product/20149861",
-        "https://www.amazon.ca/dp/B0HJ6F8L6V",
+        {"url": "https://www.amazon.ca/dp/B0HJ6F8L6V", "enabled": false, "_why": "Paused 2026-09-13: Amazon started blocking. See README, 'If a store blocks you'."},
         "https://www.walmart.ca/en/ip/Nintendo-Switch-2-The-Legend-of-Zelda-40th-Anniversary-Edition/4LPRUXHD1MMQ"
       ]
     },
