@@ -818,6 +818,76 @@ def resolve_topics(cfg, environ=None):
 
 
 # --------------------------------------------------------------------------
+# Discord push (optional, alongside or instead of ntfy)
+#
+# Messages go through a channel webhook, so there is no bot to host. A product
+# alert can ping its topic's role, and nothing else: allowed_mentions is locked
+# to that one role, so @everyone, @here or a stray mention in a product name
+# can never ping the server.
+# --------------------------------------------------------------------------
+
+DISCORD_WEBHOOK_PREFIXES = (
+    "https://discord.com/api/webhooks/",
+    "https://discordapp.com/api/webhooks/",
+    "https://ptb.discord.com/api/webhooks/",
+    "https://canary.discord.com/api/webhooks/",
+)
+DISCORD_COLOURS = {"max": 0x2ECC71, "high": 0x5865F2, "low": 0xE67E22}
+
+
+def discord_payload(alert, role_id=None):
+    """A webhook message for one alert, within Discord's size limits."""
+    embed = {
+        "title": alert["title"][:256],
+        "description": alert["body"][:4000],
+        "color": DISCORD_COLOURS.get(alert["priority"], 0x95A5A6),
+    }
+    if alert.get("click"):
+        embed["url"] = alert["click"]
+    mention = "<@&{}> ".format(role_id) if role_id else ""
+    return {
+        "username": "Restock Watcher",
+        "content": (mention + "**{}**".format(alert["title"]))[:2000],
+        "embeds": [embed],
+        "allowed_mentions": {"parse": [], "roles": [role_id] if role_id else []},
+    }
+
+
+def post_discord(webhook, payload):
+    """
+    POST one message to a Discord webhook; True on success. A short rate limit
+    is waited out once. Errors are logged by status code only: the webhook
+    link is a secret and must never reach the logs.
+    """
+    data = json.dumps(payload).encode("utf-8")
+    for attempt in (1, 2):
+        req = urllib.request.Request(webhook, data=data, method="POST", headers={
+            "Content-Type": "application/json",
+            # Discord's edge rejects some default library User-Agents.
+            "User-Agent": "RestockWatcher/2 (+https://github.com)",
+        })
+        try:
+            with urllib.request.urlopen(req, timeout=20) as r:
+                r.read()
+            return True
+        except urllib.error.HTTPError as e:
+            if e.code == 429 and attempt == 1:
+                try:
+                    wait = float(json.loads(e.read().decode("utf-8") or "{}").get("retry_after", 2))
+                except (ValueError, AttributeError):
+                    wait = 2.0
+                if wait <= 10:
+                    time.sleep(wait)
+                    continue
+            log("  !! Discord refused the message (HTTP {})".format(e.code))
+            return False
+        except Exception as e:
+            log("  !! Discord post failed ({})".format(type(e).__name__))
+            return False
+    return False
+
+
+# --------------------------------------------------------------------------
 # Config
 # --------------------------------------------------------------------------
 
@@ -882,6 +952,31 @@ def validate_config(cfg):
     check_names("notifications.status_alerts_to", notif.get("status_alerts_to"))
     check_names("discovery.notify", (cfg.get("discovery") or {}).get("notify"))
 
+    discord = notif.get("discord") or {}
+    if not isinstance(discord, dict):
+        errors.append("notifications.discord must be an object")
+        discord = {}
+    roles = discord.get("topic_roles") or {}
+    if not isinstance(roles, dict):
+        errors.append("notifications.discord.topic_roles must map topic names to role ids")
+        roles = {}
+    for topic, rid in roles.items():
+        if not re.fullmatch(r"\d{17,20}", str(rid)):
+            errors.append("the Discord role id for '{}' should be a long number like "
+                          "123456789012345678 (turn on Developer Mode, then right-click the "
+                          "role and Copy Role ID)".format(topic))
+
+    def check_topic(where, topic):
+        if topic is None:
+            return
+        if not isinstance(topic, str) or not topic.strip():
+            errors.append('{}: \'topic\' must be a name like "Zelda 2026"'.format(where))
+        elif discord.get("enabled") and topic not in roles:
+            warnings.append("{}: topic '{}' has no Discord role in topic_roles, so its Discord "
+                            "alerts will not ping anyone".format(where, topic))
+
+    check_topic("discovery", (cfg.get("discovery") or {}).get("topic"))
+
     custom = cfg.get("custom_stores") or []
     if not isinstance(custom, list):
         errors.append("custom_stores must be a list")
@@ -942,6 +1037,9 @@ def validate_config(cfg):
             names.add(name)
             where = "'{}'".format(name)
         check_names(where + " notify", p.get("notify"))
+        check_topic(where, p.get("topic"))
+        if p.get("discord") not in (None, True, False):
+            errors.append(where + ": 'discord' must be true or false")
         links = list(_links_of(p))
         if not links:
             errors.append(where + " needs at least one link")
@@ -1028,7 +1126,9 @@ def build_watchlist(cfg, state, stores, on_github):
                 skip(name, link["url"], store_name, "home connection only")
             else:
                 watch.append({"key": key, "url": link["url"], "store": stores[sid],
-                              "product": name, "notify": p.get("notify") or people})
+                              "product": name, "notify": p.get("notify") or people,
+                              "topic": p.get("topic"),
+                              "discord": p.get("discord", True) is not False})
 
     disc = cfg.get("discovery") or {}
     if disc.get("auto_watch") and (approved is None or "nintendo" in approved):
@@ -1038,7 +1138,8 @@ def build_watchlist(cfg, state, stores, on_github):
                 continue
             watch.append({"key": key, "url": u, "store": stores["nintendo"],
                           "product": _label_from_url(u) + " (auto-watched)",
-                          "notify": disc.get("notify") or people, "auto": True})
+                          "notify": disc.get("notify") or people, "auto": True,
+                          "topic": disc.get("topic"), "discord": True})
     return watch, skipped, configured
 
 
@@ -1258,10 +1359,19 @@ def print_config_summary(cfg, warnings):
     print("People: {}   (status alerts go to: {})".format(
         ", ".join(people), ", ".join(notif.get("status_alerts_to") or people)))
     print("Approved stores: {}".format(", ".join(approved) if approved is not None else "all"))
+    discord = notif.get("discord") or {}
+    if discord.get("enabled"):
+        print("Discord: on (needs the DISCORD_WEBHOOK_URL secret); topics that ping a role: {}".format(
+            ", ".join(sorted(discord.get("topic_roles") or {})) or "none yet"))
+    else:
+        print("Discord: off")
     for p in cfg["products"]:
         paused = p.get("enabled", True) is False
         print("\n{}{}".format(p["name"], "  (paused)" if paused else ""))
-        print("  notify: {}".format(", ".join(p.get("notify") or people)))
+        print("  notify: {}{}{}".format(
+            ", ".join(p.get("notify") or people),
+            "   topic: " + p["topic"] if p.get("topic") else "",
+            "   (kept off Discord)" if p.get("discord") is False else ""))
         for link in _links_of(p):
             sid = detect_store(link["url"], stores)
             if paused or not link["enabled"]:
@@ -1414,9 +1524,21 @@ def main():
     except ValueError as e:
         log("ERROR: {}".format(e))
         return 2
-    if not topics and not dry_run:
-        log("ERROR: no ntfy topic. Add the NTFY_TOPIC repository secret (one person) "
-            "or NTFY_TOPICS (several people).")
+    discord_cfg = notif.get("discord") or {}
+    webhook = (os.environ.get("DISCORD_WEBHOOK_URL") or "").strip()
+    use_discord = bool(discord_cfg.get("enabled"))
+    discord_problem = None
+    if use_discord and not webhook.startswith(DISCORD_WEBHOOK_PREFIXES):
+        discord_problem = ("Discord is on in config.json, but the DISCORD_WEBHOOK_URL secret is "
+                           + ("missing" if not webhook else "not a Discord webhook link"))
+        log("warning: {}; Discord alerts are skipped".format(discord_problem))
+        use_discord = False
+    roles = discord_cfg.get("topic_roles") or {}
+    status_to_discord = bool(discord_cfg.get("status_alerts"))
+
+    if not topics and not use_discord and not dry_run:
+        log("ERROR: nowhere to send alerts. Add the NTFY_TOPIC repository secret (one "
+            "person), NTFY_TOPICS (several people), or set up Discord (see README.md).")
         return 2
     missing = [p for p in people if p not in topics]
     if missing and not dry_run:
@@ -1427,19 +1549,28 @@ def main():
         if dry_run:
             log("DRY_RUN: would send {} notification(s)".format(len(batch)))
         for a in batch:
+            # Product alerts say whether they belong on Discord; status alerts
+            # (heartbeat, problems) follow discord.status_alerts.
+            to_discord = use_discord and a.get("discord", status_to_discord)
+            role = roles.get(a.get("topic") or "")
             if dry_run:
-                log("  [{}] {} -> {}".format(a["priority"], a["title"], ", ".join(a["to"])))
+                log("  [{}] {} -> {}{}".format(
+                    a["priority"], a["title"], ", ".join(a["to"]),
+                    " + Discord" + (" (ping {})".format(a["topic"]) if role else "")
+                    if to_discord else ""))
                 continue
             # One push per topic, even if two people share a topic.
             for topic in sorted({topics[p] for p in a["to"] if p in topics}):
                 notify(topic, server, a["title"], a["body"], a["priority"], a["tags"], a["click"])
+            if to_discord and post_discord(webhook, discord_payload(a, role)):
+                log("  -> Discord: {}".format(a["title"]))
 
     # Self-test: known-good case through the real checker and real alert path.
     # Touches no state.
     if "--self-test" in sys.argv:
         passed, label, detail, url = self_test(cfg)
         if passed is None:
-            send([{"to": status_to, "title": "SELF-TEST SKIPPED",
+            send([{"to": status_to, "discord": True, "title": "SELF-TEST SKIPPED",
                    "body": "Nintendo is rate-limiting this connection, so the test "
                            "could not run. Try again later.\n\n" + detail,
                    "priority": "default", "tags": "hourglass", "click": actions_url()}])
@@ -1448,14 +1579,14 @@ def main():
         if passed:
             alert = stock_alert(label, [(STORES["nintendo"]["name"], detail, url)])
             alert.update(
-                to=status_to, title="SELF-TEST " + alert["title"],
+                to=status_to, discord=True, title="SELF-TEST " + alert["title"],
                 body="This is a test. The watcher checked an item that is in stock "
                      "right now and detected it correctly, so a real restock will "
                      "arrive exactly like this.\n\n" + alert["body"])
             send([alert])
             log("self-test PASSED: {} | {}".format(label, detail))
             return 0
-        send([{"to": status_to, "title": "SELF-TEST FAILED",
+        send([{"to": status_to, "discord": True, "title": "SELF-TEST FAILED",
                "body": "None of the items that are normally in stock were detected "
                        "as buyable, so real restocks may be missed.\n\n" + detail,
                "priority": "high", "tags": "warning", "click": actions_url()}])
@@ -1472,8 +1603,12 @@ def main():
     alerts = []
     events = {}   # product name -> what happened to it this run
 
-    def event(product, to):
-        return events.setdefault(product, {"to": to, "in_stock": [], "listed": []})
+    def event(product, to, topic=None, discord=True):
+        return events.setdefault(product, {"to": to, "topic": topic, "discord": discord,
+                                           "in_stock": [], "listed": []})
+
+    topic_of = {p["name"]: (p.get("topic"), p.get("discord", True) is not False)
+                for p in cfg.get("products") or []}
 
     # ---- 1. Nintendo new-listing discovery ------------------------------
     # Runs first, so a product discovered this run is also stock-checked
@@ -1498,10 +1633,11 @@ def main():
     for u in new_urls:
         w = by_key.get(link_key(u))
         if w:
-            event(w["product"], w["notify"])["listed"].append(w)
+            event(w["product"], w["notify"], w.get("topic"), w.get("discord", True))["listed"].append(w)
         else:
             name = configured.get(link_key(u)) or _label_from_url(u)
-            event(name, disc.get("notify") or people)["listed"].append(
+            topic, on_discord = topic_of.get(name, (disc.get("topic"), True))
+            event(name, disc.get("notify") or people, topic, on_discord)["listed"].append(
                 {"key": link_key(u), "url": u, "unwatched": True})
 
     for w in watch:
@@ -1544,7 +1680,8 @@ def main():
         # drop rather than one every five minutes.
         if buyable and was is not True:
             st["last_alerted"] = now_iso()
-            event(w["product"], w["notify"])["in_stock"].append((w, detail))
+            event(w["product"], w["notify"], w.get("topic"),
+                  w.get("discord", True))["in_stock"].append((w, detail))
         elif was is True and not buyable:
             log("  (went out of stock again)")
 
@@ -1555,7 +1692,7 @@ def main():
             alert = stock_alert(product, [(w["store"]["name"], d, w["url"])
                                           for w, d in e["in_stock"]],
                                 new_listing=bool(e["listed"]))
-            alert["to"] = e["to"]
+            alert.update(to=e["to"], topic=e["topic"], discord=e["discord"])
             alerts.append(alert)
             continue
         for w in e["listed"]:
@@ -1569,11 +1706,12 @@ def main():
             else:
                 status = "sold out ({})".format(st.get("detail", "?"))
             alert = listing_alert(product, w["url"], status)
-            alert["to"] = e["to"]
+            alert.update(to=e["to"], topic=e["topic"], discord=e["discord"])
             listing_alerts.append(alert)
     alerts += listing_alerts[:10]
     if len(listing_alerts) > 10:
         alerts.append({"to": disc.get("notify") or people, "title": "NEW LISTINGS",
+                       "topic": disc.get("topic"), "discord": True,
                        "body": "{} more new matching products appeared on the Nintendo "
                                "store.".format(len(listing_alerts) - 10),
                        "priority": "high", "tags": "sparkles",
@@ -1618,6 +1756,8 @@ def main():
                     for (store, reason), n in sorted(counts.items())))
             if missing:
                 lines.append("\nNo ntfy topic for: {}".format(", ".join(missing)))
+            if discord_problem:
+                lines.append("\n" + discord_problem + ".")
             body = "\n".join(lines)
 
             # Re-prove the positive path every heartbeat: an all-clear only

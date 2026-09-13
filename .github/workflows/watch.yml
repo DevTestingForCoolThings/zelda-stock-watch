@@ -47,6 +47,7 @@ jobs:
         env:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
           NTFY_TOPICS: ${{ secrets.NTFY_TOPICS }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         run: python3 zelda_watch.py --self-test
 
       - name: Fetch diagnostics
@@ -68,6 +69,7 @@ jobs:
         env:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
           NTFY_TOPICS: ${{ secrets.NTFY_TOPICS }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           DRY_RUN: ${{ inputs.dry_run && '1' || '' }}
         run: python3 zelda_watch.py
 

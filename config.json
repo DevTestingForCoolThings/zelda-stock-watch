@@ -7,7 +7,13 @@
     "_people": "Everyone who can get alerts. Topics are secrets and never go in this file: with one person, use the NTFY_TOPIC repository secret; with several, use one NTFY_TOPICS secret holding JSON such as {\"julie\": \"topic-one\", \"sam\": \"topic-two\"}.",
     "people": ["julie"],
     "_status_alerts_to": "Who gets the heartbeat, self-test results and 'watcher problem' warnings.",
-    "status_alerts_to": ["julie"]
+    "status_alerts_to": ["julie"],
+    "_discord": "Optional Discord alerts through a channel webhook (the link goes in the DISCORD_WEBHOOK_URL secret). A product with a 'topic' pings that topic's role; see README.md, 'Discord alerts'. status_alerts also posts the heartbeat and warnings.",
+    "discord": {
+      "enabled": false,
+      "topic_roles": {},
+      "status_alerts": false
+    }
   },
 
   "_approved_stores": "Stores you are willing to buy from; links to any other store are skipped. Built in: nintendo, bestbuy-ca, amazon, walmart, ebgames. Add your own under custom_stores. Walmart and EB Games block GitHub's servers, so their links are only checked when the watcher runs on a home connection.",
@@ -20,6 +26,7 @@
   "products": [
     {
       "name": "Switch 2 - Zelda 40th Anniversary Edition console",
+      "topic": "Zelda 2026",
       "links": [
         "https://www.nintendo.com/en-ca/store/products/nintendo-switch-2-the-legend-of-zelda-40th-anniversary-edition-121642/",
         "https://www.bestbuy.ca/en-ca/product/20149861",
@@ -29,6 +36,7 @@
     },
     {
       "name": "Zelda 40th Pro Controller",
+      "topic": "Zelda 2026",
       "links": [
         "https://www.nintendo.com/en-ca/store/products/nintendo-switch-2-pro-controller-the-legend-of-zelda-40th-anniversary-edition-127074/",
         "https://www.bestbuy.ca/en-ca/product/20149830",
@@ -37,12 +45,14 @@
     },
     {
       "name": "Zelda 40th Pro Controller + display stand (Nintendo exclusive)",
+      "topic": "Zelda 2026",
       "links": [
         "https://www.nintendo.com/en-ca/store/products/nintendo-switch-2-pro-controller-display-stand-the-legend-of-zelda-40th-anniversary-edition-127076/"
       ]
     },
     {
       "name": "Zelda 40th carrying case + screen protector",
+      "topic": "Zelda 2026",
       "links": [
         "https://www.nintendo.com/en-ca/store/products/nintendo-switch-2-carrying-case-screen-protector-the-legend-of-zelda-40th-anniversary-edition-127073/",
         "https://www.bestbuy.ca/en-ca/product/20149880"
@@ -73,6 +83,7 @@
     "enabled": true,
     "_comment": "Alerts when a NEW matching product page appears on the Nintendo store in 'region'. Other regions' sitemaps are scanned too, because the CA sitemap lags. With auto_watch, newly found products are then stock-watched automatically.",
     "notify": ["julie"],
+    "topic": "Zelda 2026",
     "region": "en-ca",
     "sitemaps": [
       "https://www.nintendo.com/en-ca/store/sitemap.xml",

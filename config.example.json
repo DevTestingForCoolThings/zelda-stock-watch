@@ -7,7 +7,13 @@
     "_people": "Everyone who can get alerts. Topics are secrets and never go in this file: with one person, put the topic in the NTFY_TOPIC repository secret; with several, use one NTFY_TOPICS secret holding JSON such as {\"me\": \"my-long-random-topic\", \"sam\": \"sams-topic\"}.",
     "people": ["me"],
     "_status_alerts_to": "Who gets the heartbeat, self-test results and 'watcher problem' warnings.",
-    "status_alerts_to": ["me"]
+    "status_alerts_to": ["me"],
+    "_discord": "Optional: post alerts to a Discord channel through a webhook (put its link in the DISCORD_WEBHOOK_URL secret). A product's 'topic' pings the matching role. See README.md, 'Discord alerts'.",
+    "discord": {
+      "enabled": false,
+      "topic_roles": {},
+      "status_alerts": false
+    }
   },
 
   "_approved_stores": "Stores you are willing to buy from; links to any other store are skipped. Built in: nintendo, bestbuy-ca, amazon, walmart, ebgames. Walmart and EB Games block GitHub's servers, so they only work when the watcher runs on a home connection.",
@@ -26,6 +32,7 @@
   "products": [
     {
       "name": "Nintendo Switch 2 Pro Controller",
+      "topic": "Switch accessories",
       "links": [
         "https://www.nintendo.com/us/store/products/nintendo-switch-2-pro-controller-123674/"
       ]
