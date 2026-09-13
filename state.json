@@ -57,7 +57,7 @@
     "amazon-ca-console": {
       "buyable": true,
       "detail": "This item will be released on October 29, 2026.",
-      "fails": 1,
+      "fails": 2,
       "last_alerted": "2026-09-13T02:40:26+00:00",
       "last_error": "blocked by Amazon bot check",
       "warned_broken": false
