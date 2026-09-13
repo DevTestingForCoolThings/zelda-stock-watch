@@ -1,0 +1,23 @@
+name: Tests
+
+# Offline tests against saved store pages: no store is contacted, so these can
+# run on every change without touching anyone's rate limits.
+on:
+  push:
+    paths-ignore: ["state.json", "diagnostics.txt"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Offline tests
+        run: python3 -m unittest discover -s tests -v
+
+      - name: config.json is valid
+        run: python3 zelda_watch.py --check-config

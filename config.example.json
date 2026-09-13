@@ -1,0 +1,67 @@
+{
+  "version": 2,
+  "_comment": "An example to copy. Save your own as config.json, then check it with: python3 zelda_watch.py --check-config",
+
+  "notifications": {
+    "server": "https://ntfy.sh",
+    "_people": "Everyone who can get alerts. Topics are secrets and never go in this file: with one person, put the topic in the NTFY_TOPIC repository secret; with several, use one NTFY_TOPICS secret holding JSON such as {\"me\": \"my-long-random-topic\", \"sam\": \"sams-topic\"}.",
+    "people": ["me"],
+    "_status_alerts_to": "Who gets the heartbeat, self-test results and 'watcher problem' warnings.",
+    "status_alerts_to": ["me"]
+  },
+
+  "_approved_stores": "Stores you are willing to buy from; links to any other store are skipped. Built in: nintendo, bestbuy-ca, amazon, walmart, ebgames. Walmart and EB Games block GitHub's servers, so they only work when the watcher runs on a home connection.",
+  "approved_stores": ["nintendo", "bestbuy-ca", "amazon", "limited-run-games"],
+
+  "_custom_stores": "Shops that are not built in. Anything on Shopify, and most shops that publish schema.org data, is read automatically. If --check-link says it cannot read a shop, add in_stock_text or sold_out_text: words the product page shows.",
+  "custom_stores": [
+    {
+      "id": "limited-run-games",
+      "name": "Limited Run Games",
+      "domains": ["limitedrungames.com"]
+    }
+  ],
+
+  "_products": "Each product is a name plus its link at every store you would buy it from. Copy links straight from your browser. 'notify' is optional and defaults to everyone in notifications.people. A link can also be written as {\"url\": \"...\", \"enabled\": false} to pause it.",
+  "products": [
+    {
+      "name": "Nintendo Switch 2 Pro Controller",
+      "links": [
+        "https://www.nintendo.com/us/store/products/nintendo-switch-2-pro-controller-123674/"
+      ]
+    },
+    {
+      "name": "R-Type DX soundtrack (Limited Run Games)",
+      "links": [
+        "https://www.limitedrungames.com/products/r-type-dx-cd-soundtrack-limited-run-games-edition"
+      ]
+    }
+  ],
+
+  "_heartbeat": "Send a quiet all-clear this often (hours), so silence is trustworthy. Set to 0 to disable.",
+  "heartbeat_hours": 6,
+
+  "politeness": {
+    "request_spacing_seconds": 3,
+    "default_cooldown_minutes": 30
+  },
+
+  "self_test": {
+    "_comment": "Nintendo items that are normally in stock. The self-test checks these with the real checker and sends a real push, proving detection and delivery work. Only one needs to be in stock to pass.",
+    "urls": [
+      "https://www.nintendo.com/us/store/products/nintendo-switch-2-pro-controller-123674/"
+    ]
+  },
+
+  "discovery": {
+    "enabled": false,
+    "_comment": "Optional: alert when new products matching these words appear on the Nintendo store, and start watching them. See README.md.",
+    "region": "us",
+    "sitemaps": ["https://www.nintendo.com/us/store/sitemap.xml"],
+    "auto_watch": true,
+    "every_minutes": 60,
+    "must_match_any": ["zelda"],
+    "and_must_match_any": ["amiibo", "controller"],
+    "ignore_containing": []
+  }
+}
