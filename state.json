@@ -53,41 +53,37 @@
   ],
   "last_discovery": "2026-09-13T03:15:11+00:00",
   "last_heartbeat": "2026-09-12T23:17:18+00:00",
-  "targets": {
-    "amazon-ca-console": {
+  "links": {
+    "https://www.amazon.ca/dp/B0HJ6F8L6V": {
       "buyable": false,
       "detail": "Currently unavailable.",
-      "fails": 1,
+      "fails": 2,
       "last_alerted": "2026-09-13T02:40:26+00:00",
       "last_error": "blocked by Amazon bot check",
       "warned_broken": false
     },
-    "bestbuy-ca-case": {
+    "https://www.bestbuy.ca/en-ca/product/20149830": {
       "buyable": false,
       "detail": "shipping=SoldOutOnline pickup=NotAvailable",
       "fails": 0,
       "last_error": null,
       "warned_broken": false
     },
-    "bestbuy-ca-console": {
+    "https://www.bestbuy.ca/en-ca/product/20149861": {
       "buyable": false,
       "detail": "shipping=SoldOutOnline pickup=NotAvailable",
       "fails": 0,
       "last_error": null,
       "warned_broken": false
     },
-    "bestbuy-ca-procontroller": {
+    "https://www.bestbuy.ca/en-ca/product/20149880": {
       "buyable": false,
       "detail": "shipping=SoldOutOnline pickup=NotAvailable",
       "fails": 0,
       "last_error": null,
       "warned_broken": false
     },
-    "ebgames-ca-console": {
-      "fails": 3,
-      "last_error": "all fetch strategies failed [browser-headers: HTTP Error 403: Forbidden; plain: HTTP Error 403: Forbidden; curl: no schema.org (5384b)]"
-    },
-    "nintendo-ca-case": {
+    "https://www.nintendo.com/en-ca/store/products/nintendo-switch-2-carrying-case-screen-protector-the-legend-of-zelda-40th-anniversary-edition-127073": {
       "buyable": true,
       "detail": "isSalableQty=True schema=InStock $49.99 - pre-order open, ships 2026-10-29",
       "fails": 0,
@@ -95,7 +91,21 @@
       "last_error": null,
       "warned_broken": false
     },
-    "nintendo-ca-console": {
+    "https://www.nintendo.com/en-ca/store/products/nintendo-switch-2-pro-controller-display-stand-the-legend-of-zelda-40th-anniversary-edition-127076": {
+      "buyable": false,
+      "detail": "isSalableQty=False schema=OutOfStock $139.99",
+      "fails": 0,
+      "last_error": null,
+      "warned_broken": false
+    },
+    "https://www.nintendo.com/en-ca/store/products/nintendo-switch-2-pro-controller-the-legend-of-zelda-40th-anniversary-edition-127074": {
+      "buyable": false,
+      "detail": "isSalableQty=False schema=OutOfStock $124.99",
+      "fails": 0,
+      "last_error": null,
+      "warned_broken": false
+    },
+    "https://www.nintendo.com/en-ca/store/products/nintendo-switch-2-the-legend-of-zelda-40th-anniversary-edition-121642": {
       "buyable": false,
       "detail": "isSalableQty=False schema=OutOfStock $709.99",
       "fails": 0,
@@ -103,25 +113,11 @@
       "last_error": null,
       "warned_broken": false
     },
-    "nintendo-ca-procontroller": {
-      "buyable": false,
-      "detail": "isSalableQty=False schema=OutOfStock $124.99",
-      "fails": 0,
-      "last_error": null,
-      "warned_broken": false
-    },
-    "nintendo-ca-procontroller-stand": {
-      "buyable": false,
-      "detail": "isSalableQty=False schema=OutOfStock $139.99",
-      "fails": 0,
-      "last_error": null,
-      "warned_broken": false
-    },
-    "walmart-ca-console": {
+    "https://www.walmart.ca/en/ip/Nintendo-Switch-2-Pro-Controller-The-Legend-of-Zelda-40th-Anniversary-Edition/3CVEAW67GHIT": {
       "fails": 2,
       "last_error": "blocked by Walmart bot check (curl: no __NEXT_DATA__)"
     },
-    "walmart-ca-procontroller": {
+    "https://www.walmart.ca/en/ip/Nintendo-Switch-2-The-Legend-of-Zelda-40th-Anniversary-Edition/4LPRUXHD1MMQ": {
       "fails": 2,
       "last_error": "blocked by Walmart bot check (curl: no __NEXT_DATA__)"
     }
