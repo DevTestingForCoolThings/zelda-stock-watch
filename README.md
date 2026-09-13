@@ -23,7 +23,7 @@ you can point it at anything.
 |---|---|---|:---:|
 | `nintendo` | Nintendo Store (any region) | `isSalableQty` on the product, cross-checked with schema.org | ✅ |
 | `bestbuy-ca` | Best Buy Canada | Best Buy's public stock API | ✅ |
-| `amazon` | Amazon (.ca and .com) | add-to-cart and out-of-stock markers | ✅ |
+| `amazon` | Amazon (.ca and .com) | add-to-cart and out-of-stock markers | ⚠️ check less often |
 | `walmart` | Walmart (.ca and .com) | the product's own data on the page | 🏠 home only |
 | `ebgames` | EB Games Canada | schema.org | 🏠 home only |
 | *your own* | any other shop | Shopify data, words you choose, or schema.org | ✅ usually |
@@ -31,6 +31,10 @@ you can point it at anything.
 🏠 **Walmart and EB Games block GitHub's servers.** Their links are skipped
 when the watcher runs on GitHub and checked when it runs on a home connection.
 The heartbeat tells you how many links were skipped and why.
+
+⚠️ **Amazon is the touchiest.** In September 2026 it began showing bot checks
+to GitHub's servers within an hour of 5-minute checks. Set it to
+`"every 30 minutes"` (see [Turning stores on and off](#turning-stores-on-and-off)).
 
 ---
 
@@ -84,20 +88,48 @@ belongs to.
 - Best Buy links must end in the product number (the SKU), as copied from the
   address bar.
 
-### Approved stores
+### Turning stores on and off
 
-`approved_stores` lists the stores you're willing to buy from. A link to any
-other store is skipped. That makes it a quick way to rule a store in or out
-without editing every product.
+Near the top of `config.json` is a short list with one line per store:
 
 ```json
-"approved_stores": ["nintendo", "bestbuy-ca", "amazon", "walmart"]
+"stores": {
+  "nintendo":   "on",
+  "bestbuy-ca": "on",
+  "amazon":     "every 30 minutes",
+  "walmart":    "on",
+  "ebgames":    "off"
+}
 ```
 
-After editing, run `python3 zelda_watch.py --check-config`. It lists every
-product and link with its status (`ok`, `home connection only`,
-`SKIPPED - not approved`, and so on), and explains any mistake in plain words.
-It makes no requests.
+Change one word to switch a store for every product at once:
+
+| Write | What happens |
+|---|---|
+| `"on"` | Checked every 5 minutes. |
+| `"off"` | Not checked at all, until you change it back. |
+| `"every 30 minutes"`, `"every 2 hours"`, `"every hour"` | Checked less often. Fewer visits make a block less likely, but a restock at that store can reach you that much later. |
+
+A store left out of the list is off. Walmart and EB Games are still checked only
+from a home connection, even when they're on.
+
+**Editing on GitHub:** open `config.json`, click the ✏️ pencil, change the word
+between the quotes, then **Commit changes**. It takes effect on the next check.
+Keep the quotes, and the comma at the end of every line except the last.
+
+**If you make a typo** (say `"of"`), only that store is switched off; everything
+else keeps running. Within a minute GitHub shows a red ✗ next to your change;
+click it to see what's wrong, in plain words. If the punctuation breaks (a quote
+or comma goes missing), the watcher can't read the file at all and stops until
+it's fixed, and the red ✗ shows that too.
+
+On your own computer, `python3 zelda_watch.py --check-config` lists every product
+and link with its status (`ok`, `off`, `every 30 minutes`, `home connection only`,
+and so on) without contacting any store.
+
+To pause a single link rather than a whole store, write it as
+`{"url": "...", "enabled": false}`. Older configs with an `approved_stores` list
+still work.
 
 ---
 
@@ -115,7 +147,7 @@ It shows the store it detected, what it read, and whether it's buyable. For a
 shop it doesn't know yet, it tries the custom-store reader and tells you the
 exact entry to add.
 
-**2. Add the shop to `custom_stores`, and its id to `approved_stores`:**
+**2. Add the shop to `custom_stores`, and switch it on in `stores`:**
 
 ```json
 "custom_stores": [
@@ -125,7 +157,10 @@ exact entry to add.
     "domains": ["limitedrungames.com"]
   }
 ],
-"approved_stores": ["nintendo", "limited-run-games"]
+"stores": {
+  "nintendo": "on",
+  "limited-run-games": "on"
+}
 ```
 
 That's usually all. The custom-store reader tries, in order:
@@ -343,18 +378,15 @@ low-priority *Paused …: bot check* notice per pause, and a paused store isn't
 contacted at all until the pause ends. As soon as the store answers normally
 again, the count resets. It never tries to get around a bot check.
 
-**To pause a store yourself** (takes effect on the next run). Edit `config.json`
-on GitHub (open the file, click the ✏️ pencil, then **Commit changes**):
+**To pause a store yourself**, set it to `"off"` in the `stores` list (see
+[Turning stores on and off](#turning-stores-on-and-off)). It takes effect on
+the next check.
 
-- **One link:** write it as
-  `{"url": "https://www.amazon.ca/dp/...", "enabled": false}`
-- **A whole store:** remove its id from `approved_stores`. `--check-config`
-  then lists its links as `SKIPPED - not approved`.
-
-**Coming back.** Give it a few days. Re-enable **one** link, then run the
-workflow by hand with **dry run** ticked and look at the log. If it still says
-*bot check*, pause it again and wait longer. Keep the number of links at that
-store small: every link is another request every 5 minutes.
+**Coming back.** Give it a few days. Then set it to `"every 30 minutes"` rather
+than straight back to `"on"`, run the workflow by hand with **dry run** ticked,
+and look at the log. If it still says *bot check*, set it back to `"off"` and wait
+longer. Keep the number of links at that store small: every link is another
+visit each time the store is checked.
 
 **If your own browser starts showing CAPTCHAs** on that store, your home
 connection has been flagged. That can only come from running the watcher on
@@ -393,7 +425,7 @@ Please don't trigger runs more often than every 5 minutes.
 - The **heartbeat** lists every link, repeats the self-test, and reports how many
   checks really ran. Silence between heartbeats means "nothing in stock", not
   "the watcher died".
-- **Tests**: `python3 -m unittest discover -s tests -v` runs about 70 offline checks
+- **Tests**: `python3 -m unittest discover -s tests -v` runs about 100 offline checks
   against saved copies of real store pages (`tests/fixtures`), each store both
   in stock and sold out. They run automatically on every change and never
   contact a store.

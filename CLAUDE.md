@@ -85,8 +85,13 @@ Everything is in `zelda_watch.py`. A normal run, in `main()`:
 5. **Watchlist.** `build_watchlist()` expands products into links. The store is
    detected by domain (`all_stores()` / `detect_store()`; custom stores win over
    built-ins). A link is skipped if paused, from an unknown store, from a store
-   not in `approved_stores`, or from a store with `github_ok: False` when running
-   on Actions.
+   switched off in the `stores` list (`store_modes()`; the older `approved_stores`
+   still works), or from a store with `github_ok: False` when running on Actions.
+   A store set to "every N minutes" stays in the watchlist, marked `not_due`
+   between checks. `state["store_checked"]` holds its last check time, and only
+   for such stores, so stores checked every run don't make state.json change
+   (and commit) every run. A value the watcher can't understand turns off that
+   store alone (a warning, not an error).
 6. **Check.** Each link goes to its store's checker, which returns
    `(buyable, detail)` or raises. `RateLimited` means the host is on cooldown.
    `BotChecked` pauses the store with an escalating back-off (6, 12, 24, then 48
@@ -148,17 +153,19 @@ fixtures.
 - Live: Phase 1 (products as links, approved and custom stores, per-person
   alerts), Discord alerts (topic "Zelda 2026" → role `1548538546472751206` in the
   owner's test server; a friend receives the pings), and the bot-check back-off.
-- **Amazon link paused** (`"enabled": false`, with a `_why` note). Amazon.ca began
+- **Amazon is `"off"`** in the `stores` list (with a `_note`). Amazon.ca began
   serving bot checks to GitHub's runners about an hour after the 5-minute schedule
-  started. The owner's own browsing is unaffected. Re-enable one link after a few
-  days and confirm with a dry run. A per-store check interval (e.g. Amazon every
-  30 minutes) is a proposed mitigation.
+  started. The owner's own browsing is unaffected. After a few days, set it to
+  `"every 30 minutes"` and confirm with a dry run (on Actions, dry runs don't save
+  state).
+- The owner edits `config.json` in GitHub's web editor and chose a plain on/off
+  list over an Actions button. Keep store switching to one word per line.
 - The Discord self-test post has not been confirmed yet. The last attempt ran as
   an ordinary check (no self-test box ticked).
 - Not built yet:
   - adding products from Discord (the owner is holding off)
-  - Phase 2: a home or phone runner for Walmart, a token-expiry heads-up, and a
-    fixture refresh tool
+  - Phase 2: a home or phone runner for Walmart, a fixture refresh tool, and
+    possibly self-test results on the run's summary page
   - Phase 3: a landing-page README. This needs the owner's decisions on a
     license, renaming the repo (which changes the cron-job.org URL), and making
     it a GitHub template.

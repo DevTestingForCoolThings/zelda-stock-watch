@@ -688,6 +688,107 @@ def link_key(url):
 
 
 # --------------------------------------------------------------------------
+# Store switches: config.json's "stores" list
+# --------------------------------------------------------------------------
+
+# Runs are about 5 minutes apart but never exactly, so a store checked "every
+# 30 minutes" counts as due a little early rather than waiting a whole extra run.
+STORE_DUE_GRACE_SECONDS = 120
+
+_EVERY = re.compile(r"every (?:(\d+) ?)?(minutes?|mins?|m|hours?|hrs?|h)")
+
+
+def parse_store_setting(value):
+    """
+    One entry of the stores list, in plain words: "on" -> 0 (every run),
+    "off" -> None, and "every 30 minutes", "every 2 hours" or "every hour" ->
+    minutes between checks. Raises ValueError, worded for the user, otherwise.
+    """
+    if value is True:
+        return 0
+    if value is False:
+        return None
+    text = re.sub(r"\s+", " ", str(value)).strip().lower()
+    if text == "on":
+        return 0
+    if text == "off":
+        return None
+    m = _EVERY.fullmatch(text)
+    if not m:
+        raise ValueError('should be "on", "off", or something like "every 30 minutes"')
+    minutes = int(m.group(1) or 1) * (60 if m.group(2).startswith("h") else 1)
+    if minutes < 5:
+        raise ValueError('is more often than the watcher runs; "on" already checks it '
+                         "every 5 minutes")
+    return 0 if minutes == 5 else minutes
+
+
+def store_modes(cfg, stores):
+    """
+    Each store's switch, from the stores list (or the older approved_stores).
+    Returns (modes, why_off, problems):
+      modes    - store id -> minutes between checks (0 = every run), None if off
+      why_off  - store id -> why it is off, as shown for its skipped links
+      problems - entries that could not be understood, in plain words
+    With neither list, every store is on.
+    """
+    listed = cfg.get("stores")
+    approved = cfg.get("approved_stores")
+    if isinstance(listed, list):   # a plain list of store ids means all "on"
+        listed = {sid: "on" for sid in listed if isinstance(sid, str)}
+    modes, why_off, problems = {}, {}, []
+    for sid, store in stores.items():
+        if isinstance(listed, dict):
+            if sid not in listed:
+                modes[sid], why_off[sid] = None, "not in the stores list"
+                continue
+            try:
+                modes[sid] = parse_store_setting(listed[sid])
+            except ValueError as e:
+                modes[sid], why_off[sid] = None, "setting not understood"
+                problems.append('stores: "{}": {} {}, so {} is off until that is fixed.'.format(
+                    sid, json.dumps(listed[sid]), e, store["name"]))
+                continue
+            if modes[sid] is None:
+                why_off[sid] = "turned off"
+        elif isinstance(approved, list) and sid not in approved:
+            modes[sid], why_off[sid] = None, "not approved"
+        else:
+            modes[sid] = 0
+    if isinstance(listed, dict):
+        custom = sorted(sid for sid, s in stores.items() if not s.get("builtin"))
+        for sid in listed:
+            if not str(sid).startswith("_") and sid not in stores:
+                problems.append('stores: "{}" is not a known store, so it is ignored. Built in: '
+                                "{}{}".format(sid, ", ".join(sorted(STORES)),
+                                              "; custom: " + ", ".join(custom) if custom else ""))
+    return modes, why_off, problems
+
+
+def store_due(sid, minutes, state):
+    """Whether a store is due a check this run (always, unless "every N minutes")."""
+    if not minutes:
+        return True
+    last = (state.get("store_checked") or {}).get(sid)
+    try:
+        age = (datetime.now(timezone.utc) - datetime.fromisoformat(last)).total_seconds()
+    except (TypeError, ValueError):
+        return True
+    return age >= minutes * 60 - STORE_DUE_GRACE_SECONDS
+
+
+def describe_mode(minutes):
+    """A store switch back in words: "on", "off", "every 30 minutes"."""
+    if minutes is None:
+        return "off"
+    if not minutes:
+        return "on"
+    if minutes % 60 == 0:
+        return "every hour" if minutes == 60 else "every {} hours".format(minutes // 60)
+    return "every {} minutes".format(minutes)
+
+
+# --------------------------------------------------------------------------
 # Nintendo new-product discovery
 # --------------------------------------------------------------------------
 
@@ -1024,8 +1125,15 @@ def validate_config(cfg):
             errors.append(where + ": method 'text' needs in_stock_text or sold_out_text")
 
     stores = all_stores(cfg)
+    listed = cfg.get("stores")
     approved = cfg.get("approved_stores")
-    if approved is not None:
+    if listed is not None and not isinstance(listed, (dict, list)):
+        errors.append('stores must be a list of stores with "on" or "off", e.g. '
+                      '"stores": {"nintendo": "on", "amazon": "off"}')
+    if listed is not None and approved is not None:
+        warnings.append("approved_stores is ignored because config.json also has a stores "
+                        "list; delete approved_stores")
+    elif approved is not None:
         if not isinstance(approved, list):
             errors.append("approved_stores must be a list of store ids")
             approved = []
@@ -1034,6 +1142,8 @@ def validate_config(cfg):
                 errors.append("approved_stores: '{}' is not a known store. Built in: {}{}".format(
                     a, ", ".join(sorted(STORES)),
                     "; custom: " + ", ".join(sorted(ids)) if ids else ""))
+    modes, why_off, problems = store_modes(cfg, stores)
+    warnings.extend(problems)
 
     products = cfg.get("products")
     if not isinstance(products, list) or not products:
@@ -1070,9 +1180,15 @@ def validate_config(cfg):
                 warnings.append("{}: {} is not a built-in store, so that link is skipped. Add it "
                                 "under custom_stores (test it first with --check-link).".format(
                                     where, _host(u)))
-            elif approved is not None and sid not in approved:
-                warnings.append("{}: {} is not in approved_stores, so that link is skipped.".format(
-                    where, stores[sid]["name"]))
+            elif modes[sid] is None:
+                # A store turned off on purpose needs no warning; one left out
+                # of the list may be an oversight.
+                if why_off[sid] == "not approved":
+                    warnings.append("{}: {} is not in approved_stores, so that link is "
+                                    "skipped.".format(where, stores[sid]["name"]))
+                elif why_off[sid] == "not in the stores list":
+                    warnings.append('{}: {} is not in the stores list, so that link is skipped. '
+                                    'Add "{}": "on" to check it.'.format(where, stores[sid]["name"], sid))
             elif sid == "bestbuy-ca" and not _bestbuy_sku(u):
                 warnings.append("{}: this Best Buy link has no SKU at the end, so it is "
                                 "skipped: {}".format(where, u))
@@ -1119,7 +1235,8 @@ def build_watchlist(cfg, state, stores, on_github):
     """
     notif = cfg.get("notifications") or {}
     people = notif.get("people") or []
-    approved = cfg.get("approved_stores")
+    modes, why_off, _ = store_modes(cfg, stores)
+    due = {sid: store_due(sid, m, state) for sid, m in modes.items()}
     watch, skipped, configured = [], [], {}
 
     def skip(product, url, store, reason):
@@ -1137,18 +1254,21 @@ def build_watchlist(cfg, state, stores, on_github):
                 skip(name, link["url"], store_name, "paused")
             elif sid is None:
                 skip(name, link["url"], store_name, "unknown store")
-            elif approved is not None and sid not in approved:
-                skip(name, link["url"], store_name, "not approved")
+            elif modes[sid] is None:
+                skip(name, link["url"], store_name, why_off[sid])
             elif on_github and not stores[sid].get("github_ok", True):
                 skip(name, link["url"], store_name, "home connection only")
             else:
+                # A store on "every N minutes" stays on the list between its
+                # checks, marked not due, so the heartbeat shows its last reading.
                 watch.append({"key": key, "url": link["url"], "store": stores[sid],
                               "product": name, "notify": p.get("notify") or people,
                               "topic": p.get("topic"),
-                              "discord": p.get("discord", True) is not False})
+                              "discord": p.get("discord", True) is not False,
+                              "every": modes[sid], "not_due": not due[sid]})
 
     disc = cfg.get("discovery") or {}
-    if disc.get("auto_watch") and (approved is None or "nintendo" in approved):
+    if disc.get("auto_watch") and modes.get("nintendo") is not None:
         for u in state.get("auto_watch", []):
             key = link_key(u)
             if key in configured:
@@ -1156,7 +1276,8 @@ def build_watchlist(cfg, state, stores, on_github):
             watch.append({"key": key, "url": u, "store": stores["nintendo"],
                           "product": _label_from_url(u) + " (auto-watched)",
                           "notify": disc.get("notify") or people, "auto": True,
-                          "topic": disc.get("topic"), "discord": True})
+                          "topic": disc.get("topic"), "discord": True,
+                          "every": modes["nintendo"], "not_due": not due["nintendo"]})
     return watch, skipped, configured
 
 
@@ -1371,11 +1492,20 @@ def print_config_summary(cfg, warnings):
     stores = all_stores(cfg)
     notif = cfg["notifications"]
     people = notif["people"]
-    approved = cfg.get("approved_stores")
+    modes, why_off, _ = store_modes(cfg, stores)
     print("config.json looks good (version 2).")
     print("People: {}   (status alerts go to: {})".format(
         ", ".join(people), ", ".join(notif.get("status_alerts_to") or people)))
-    print("Approved stores: {}".format(", ".join(approved) if approved is not None else "all"))
+    on = ["{}{}".format(s["name"], "" if s.get("github_ok", True) else " (home connection only)")
+          for sid, s in stores.items() if modes[sid] == 0]
+    slower = ["{} ({})".format(s["name"], describe_mode(modes[sid]))
+              for sid, s in stores.items() if modes[sid]]
+    off = [s["name"] for sid, s in stores.items() if modes[sid] is None]
+    print("Stores on: {}".format(", ".join(on) or "none"))
+    if slower:
+        print("Checked less often: {}".format(", ".join(slower)))
+    if off:
+        print("Off: {}".format(", ".join(off)))
     discord = notif.get("discord") or {}
     if discord.get("enabled"):
         print("Discord: on (needs the DISCORD_WEBHOOK_URL secret); topics that ping a role: {}".format(
@@ -1395,12 +1525,12 @@ def print_config_summary(cfg, warnings):
                 tag = "paused"
             elif sid is None:
                 tag = "SKIPPED - unknown store"
-            elif approved is not None and sid not in approved:
-                tag = "SKIPPED - not approved"
+            elif modes[sid] is None:
+                tag = "off" if why_off[sid] == "turned off" else "SKIPPED - " + why_off[sid]
             elif not stores[sid].get("github_ok", True):
                 tag = "home connection only"
             else:
-                tag = "ok"
+                tag = describe_mode(modes[sid]) if modes[sid] else "ok"
             print("  [{}] {}: {}".format(tag, stores[sid]["name"] if sid else _host(link["url"]),
                                          link["url"]))
     if warnings:
@@ -1414,7 +1544,7 @@ def check_link(cfg, url):
     """--check-link URL: show exactly what the watcher reads from one link."""
     stores = all_stores(cfg)
     sid = detect_store(url, stores)
-    approved = cfg.get("approved_stores")
+    modes, why_off, _ = store_modes(cfg, stores)
     print("Link:    {}".format(url))
     if sid is None:
         store = {"name": _host(url), "checker": check_generic, "builtin": False}
@@ -1423,9 +1553,16 @@ def check_link(cfg, url):
     else:
         store = stores[sid]
         print("Store:   {} ({}{})".format(store["name"], sid, "" if store["builtin"] else ", custom"))
-        print("         approved: {}   checked from GitHub: {}".format(
-            "yes" if approved is None or sid in approved else "NO - add it to approved_stores",
-            "yes" if store.get("github_ok", True) else "no (home connection only)"))
+        if modes[sid] is not None:
+            switch = describe_mode(modes[sid])
+        elif why_off[sid] == "not in the stores list":
+            switch = 'OFF - add "{}": "on" to stores'.format(sid)
+        elif why_off[sid] == "not approved":
+            switch = "OFF - add it to approved_stores"
+        else:
+            switch = "OFF ({})".format(why_off[sid])
+        print("         switch: {}   checked from GitHub: {}".format(
+            switch, "yes" if store.get("github_ok", True) else "no (home connection only)"))
     try:
         buyable, detail = store["checker"]({"url": url, "store": store})
     except Exception as e:
@@ -1438,7 +1575,7 @@ def check_link(cfg, url):
     if sid is None:
         domain = re.sub(r"^www\.", "", _host(url))
         print('\nTo watch it, add {{"id": "...", "name": "...", "domains": ["{}"]}} to '
-              "custom_stores and its id to approved_stores.".format(domain))
+              'custom_stores, and the same id to stores with "on".'.format(domain))
     return 0
 
 
@@ -1653,6 +1790,7 @@ def main():
     for u in new_urls:
         w = by_key.get(link_key(u))
         if w:
+            w["not_due"] = False   # a new listing is checked straight away
             event(w["product"], w["notify"], w.get("topic"), w.get("discord", True))["listed"].append(w)
         else:
             name = configured.get(link_key(u)) or _label_from_url(u)
@@ -1660,7 +1798,10 @@ def main():
             event(name, disc.get("notify") or people, topic, on_discord)["listed"].append(
                 {"key": link_key(u), "url": u, "unwatched": True})
 
+    checked = set()   # stores on "every N minutes" that were checked this run
     for w in watch:
+        if w.get("not_due"):
+            continue
         st = links_state.setdefault(w["key"], {})
         label = "{} ({})".format(w["product"], w["store"]["name"])
         host = _host(w["url"])
@@ -1668,6 +1809,8 @@ def main():
             # A paused store is not contacted at all until its pause ends.
             if _cooldowns.get(host, 0) > time.time():
                 raise _paused(host)
+            if w.get("every"):
+                checked.add(w["store"]["id"])
             buyable, detail = w["store"]["checker"](w)
         except BotChecked as e:
             blocks = state.setdefault("blocks", {})
@@ -1789,11 +1932,13 @@ def main():
                     current = w["product"]
                     lines.append("\n" + current)
                 st = links_state.get(w["key"], {})
+                store = w["store"]["name"]
+                if w.get("every"):
+                    store += " ({})".format(describe_mode(w["every"]))
                 if st.get("last_error"):
-                    lines.append("  x {}: NOT WORKING - {}".format(
-                        w["store"]["name"], st["last_error"][:60]))
+                    lines.append("  x {}: NOT WORKING - {}".format(store, st["last_error"][:60]))
                 else:
-                    lines.append("  - {}: {}".format(w["store"]["name"], st.get("detail", "?")))
+                    lines.append("  - {}: {}".format(store, st.get("detail", "?")))
             if skipped:
                 counts = {}
                 for s in skipped:
@@ -1847,6 +1992,17 @@ def main():
     keep = set(configured) | {link_key(u) for u in state.get("auto_watch", [])}
     for k in [k for k in links_state if k not in keep]:
         del links_state[k]
+
+    # Remember when each "every N minutes" store was last checked. Stores
+    # checked on every run need no timestamp, so their runs leave state alone.
+    modes = store_modes(cfg, stores)[0]
+    last_checked = {sid: t for sid, t in (state.get("store_checked") or {}).items()
+                    if modes.get(sid)}
+    last_checked.update(dict.fromkeys(checked, now_iso()))
+    if last_checked:
+        state["store_checked"] = last_checked
+    else:
+        state.pop("store_checked", None)
 
     # Persist cooldowns so the next run keeps respecting them.
     live = {h: int(t) for h, t in _cooldowns.items() if t > time.time()}

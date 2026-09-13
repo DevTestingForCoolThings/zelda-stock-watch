@@ -32,17 +32,22 @@ def repo_json(name):
 
 
 def make_cfg(products, **over):
-    """A minimal valid config: one person, the usual stores, no extras."""
+    """
+    A minimal valid config: one person, the usual stores, no extras. Passing
+    approved_stores uses that older format instead of the stores list.
+    """
     cfg = {
         "version": 2,
         "notifications": {"people": ["julie"], "status_alerts_to": ["julie"]},
-        "approved_stores": ["nintendo", "bestbuy-ca", "amazon", "walmart"],
+        "stores": {"nintendo": "on", "bestbuy-ca": "on", "amazon": "on", "walmart": "on"},
         "custom_stores": [],
         "products": products,
         "heartbeat_hours": 0,
         "discovery": {"enabled": False},
         "politeness": {"request_spacing_seconds": 0},
     }
+    if "approved_stores" in over:
+        del cfg["stores"]
     cfg.update(over)
     return cfg
 

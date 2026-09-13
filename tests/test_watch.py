@@ -13,6 +13,7 @@ import json
 import time
 import unittest
 import urllib.error
+from datetime import datetime, timedelta, timezone
 
 from helpers import WatcherTestCase, fixture, make_cfg, repo_json, z
 
@@ -332,12 +333,13 @@ class WatchlistTest(unittest.TestCase):
         self.assertEqual(len(watch), 2)
         self.assertEqual(skipped, [])
 
-    def test_unapproved_and_paused_links_are_skipped(self):
+    def test_unlisted_and_paused_links_are_skipped(self):
         cfg = make_cfg([{"name": "A", "links": [NIN_CA_IN, {"url": AMZ_CA_IN, "enabled": False}, EB_OUT]},
                         {"name": "B", "enabled": False, "links": [BB_IN]}])
         watch, skipped, _ = self.build(cfg)
         self.assertEqual(len(watch), 1)
-        self.assertEqual(sorted(s["reason"] for s in skipped), ["not approved", "paused", "paused"])
+        self.assertEqual(sorted(s["reason"] for s in skipped),
+                         ["not in the stores list", "paused", "paused"])
 
     def test_auto_watch_adds_each_discovery_once(self):
         cfg = make_cfg([{"name": "Case", "links": [NIN_CA_PRE]}],
@@ -580,6 +582,106 @@ class BotCheckTest(OfflineTestCase):
         link = r.state["links"][z.link_key(AMZ_CA_OUT)]
         self.assertEqual(link.get("fails", 0), 0)
         self.assertIn("paused until", link["last_error"])
+
+
+def minutes_ago(n):
+    return (datetime.now(timezone.utc) - timedelta(minutes=n)).isoformat(timespec="seconds")
+
+
+class StoreSwitchTest(OfflineTestCase):
+    """The stores list: each store "on", "off", or "every N minutes"."""
+
+    def cfg(self, stores, links=(NIN_CA_IN, AMZ_CA_IN), **over):
+        return make_cfg([{"name": "Pro Controller", "links": list(links)}], stores=stores, **over)
+
+    def test_plain_words_are_understood(self):
+        for text, minutes in [("on", 0), (" On ", 0), (True, 0), ("off", None), ("OFF", None),
+                              (False, None), ("every 30 minutes", 30), ("every 2 hours", 120),
+                              ("every hour", 60), ("Every 45 mins", 45), ("every 5 minutes", 0)]:
+            self.assertEqual(z.parse_store_setting(text), minutes, text)
+        for text in ("of", "sometimes", "every 2 minutes", "", None):
+            with self.assertRaises(ValueError, msg=repr(text)):
+                z.parse_store_setting(text)
+
+    def test_a_store_turned_off_is_not_contacted(self):
+        r = self.run_main(self.cfg({"nintendo": "on", "amazon": "off"}), {})
+        self.assertNotIn(AMZ_CA_IN, self.web.requests)
+        self.assertEqual([t for _, t, _ in r.sent], ["IN STOCK: Pro Controller"], r.out)
+        self.assertNotIn("Amazon", r.sent[0][2])
+
+    def test_turning_a_store_off_needs_no_warning_but_leaving_it_out_does(self):
+        self.assertEqual(z.validate_config(self.cfg({"nintendo": "on", "amazon": "off"})), ([], []))
+        errors, warnings = z.validate_config(self.cfg({"nintendo": "on"}))
+        self.assertEqual(errors, [])
+        self.assertEqual(len(warnings), 1, warnings)
+        self.assertIn('Add "amazon": "on"', warnings[0])
+
+    def test_a_typo_turns_off_only_that_store(self):
+        cfg = self.cfg({"nintendo": "on", "amazon": "of"})
+        errors, warnings = z.validate_config(cfg)
+        self.assertEqual(errors, [])
+        self.assertEqual(len(warnings), 1, warnings)
+        self.assertIn('"amazon": "of"', warnings[0])
+        self.assertIn("Amazon is off", warnings[0])
+        watch, skipped, _ = z.build_watchlist(cfg, {}, z.all_stores(cfg), True)
+        self.assertEqual([w["store"]["id"] for w in watch], ["nintendo"])
+        self.assertEqual(skipped[0]["reason"], "setting not understood")
+
+    def test_unknown_store_names_are_pointed_out_and_notes_ignored(self):
+        _, warnings = z.validate_config(self.cfg(
+            {"nintendo": "on", "amazon": "on", "wallmart": "on", "_note": "anything"}))
+        self.assertEqual(len(warnings), 1, warnings)
+        self.assertIn('"wallmart" is not a known store', warnings[0])
+
+    def test_every_n_minutes_checks_less_often_and_still_alerts(self):
+        cfg = self.cfg({"nintendo": "on", "amazon": "every 30 minutes"}, links=[NIN_CA_OUT, AMZ_CA_IN])
+        # First run: Amazon is due, and a restock there alerts as usual.
+        first = self.run_main(cfg, {})
+        self.assertEqual(self.web.requests.count(AMZ_CA_IN), 1)
+        self.assertEqual([t for _, t, _ in first.sent], ["IN STOCK: Pro Controller"], first.out)
+        self.assertIn("amazon", first.state["store_checked"])
+        # The next run checks Nintendo but leaves Amazon alone, keeping its reading.
+        second = self.run_main(cfg, first.state)
+        self.assertEqual(self.web.requests.count(NIN_CA_OUT), 2)
+        self.assertEqual(self.web.requests.count(AMZ_CA_IN), 1)
+        self.assertTrue(second.state["links"][z.link_key(AMZ_CA_IN)]["buyable"])
+        self.assertEqual(second.sent, [])
+        # Close enough to 30 minutes later (runs are never exactly on time), it is due.
+        self.run_main(cfg, dict(second.state, store_checked={"amazon": minutes_ago(29)}))
+        self.assertEqual(self.web.requests.count(AMZ_CA_IN), 2)
+
+    def test_stores_checked_every_run_leave_no_timestamp(self):
+        # Otherwise every run would change state.json, and commit it.
+        cfg = self.cfg({"nintendo": "on", "amazon": "on"}, links=[NIN_CA_OUT, AMZ_CA_OUT])
+        r = self.run_main(cfg, {"store_checked": {"amazon": minutes_ago(1)}})
+        self.assertEqual(self.web.requests.count(AMZ_CA_OUT), 1)
+        self.assertNotIn("store_checked", r.state)
+
+    def test_heartbeat_shows_the_slower_store(self):
+        cfg = self.cfg({"nintendo": "on", "amazon": "every 2 hours"},
+                       links=[NIN_CA_OUT, AMZ_CA_OUT], heartbeat_hours=6)
+        r = self.run_main(cfg, {})
+        body = next(b for _, t, b in r.sent if t == "Watcher still alive")
+        self.assertIn("Amazon (every 2 hours): ", body)
+
+    def test_check_config_lists_the_switches(self):
+        cfg = self.cfg({"nintendo": "on", "amazon": "every 2 hours", "ebgames": "off"})
+        r = self.run_main(cfg, None, argv=["--check-config"])
+        self.assertEqual(r.rc, 0, r.out)
+        self.assertIn("Stores on: Nintendo Store\n", r.out)
+        self.assertIn("Checked less often: Amazon (every 2 hours)", r.out)
+        self.assertIn("EB Games Canada", r.out.split("Off: ")[1].splitlines()[0])
+        self.assertIn("[every 2 hours] Amazon", r.out)
+
+    def test_the_older_approved_stores_still_works(self):
+        cfg = make_cfg([{"name": "A", "links": [NIN_CA_IN, AMZ_CA_IN]}], approved_stores=["nintendo"])
+        watch, skipped, _ = z.build_watchlist(cfg, {}, z.all_stores(cfg), True)
+        self.assertEqual([w["store"]["id"] for w in watch], ["nintendo"])
+        self.assertEqual(skipped[0]["reason"], "not approved")
+        cfg["stores"] = {"nintendo": "on", "amazon": "on"}
+        self.assertEqual(z.validate_config(cfg)[1],
+                         ["approved_stores is ignored because config.json also has a stores "
+                          "list; delete approved_stores"])
 
 
 if __name__ == "__main__":
