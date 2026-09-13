@@ -46,9 +46,14 @@ Machine quirks that have caused trouble:
 
 - **`main` is live.** cron-job.org POSTs a `workflow_dispatch` to
   `.github/workflows/watch.yml` every 5 minutes, using a fine-grained token
-  (Actions read/write, this repo only). It expires around mid-December 2026.
+  (Actions read/write, this repo only). The owner gave it a long expiry and
+  renews or disables it themselves, so no expiry warning is wanted.
   GitHub's own `schedule` trigger is only a backstop: in practice it ran every
   2–4 hours. Anything pushed to `main` runs within 5 minutes.
+- Checks share the `zelda-watch` concurrency group with `cancel-in-progress: true`,
+  so a run stuck in GitHub's queue can't block every check behind it (this
+  happened 2026-09-13). The self-test and diagnostics use their own group, so
+  the next check can't cancel them.
 - The bot commits `state.json` after runs, with `[skip ci]`. Always
   `git pull --rebase` before pushing, and don't touch `state.json` in your own commits.
 - `.github/workflows/tests.yml` runs the offline suite on every push and PR.

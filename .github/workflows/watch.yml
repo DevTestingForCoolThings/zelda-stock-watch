@@ -22,10 +22,14 @@ on:
         type: boolean
         default: false
 
-# Never let two checks run at once and fight over state.json.
+# Never let two checks run at once and fight over state.json. A new check
+# replaces one that is still queued or running: a check takes ~20s, and on
+# 2026-09-13 a run sat queued waiting for a runner and held up every check
+# behind it. The self-test and diagnostics touch no state, so each gets its
+# own group and is never replaced by the next scheduled check.
 concurrency:
-  group: zelda-watch
-  cancel-in-progress: false
+  group: ${{ (inputs.self_test || inputs.diagnose) && format('zelda-watch-manual-{0}', github.run_id) || 'zelda-watch' }}
+  cancel-in-progress: true
 
 permissions:
   contents: write
