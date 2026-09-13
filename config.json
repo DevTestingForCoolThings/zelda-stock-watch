@@ -10,8 +10,8 @@
     "status_alerts_to": ["julie"],
     "_discord": "Optional Discord alerts through a channel webhook (the link goes in the DISCORD_WEBHOOK_URL secret). A product with a 'topic' pings that topic's role; see README.md, 'Discord alerts'. status_alerts also posts the heartbeat and warnings.",
     "discord": {
-      "enabled": false,
-      "topic_roles": {},
+      "enabled": true,
+      "topic_roles": {"Zelda 2026": "1548538546472751206"},
       "status_alerts": false
     }
   },
@@ -71,6 +71,8 @@
 
   "self_test": {
     "_comment": "Nintendo items that are normally in stock. Running the workflow with self_test ticked checks these with the real checker and sends a real push, proving detection and delivery work end to end. The heartbeat repeats it. Only one needs to be in stock to pass.",
+    "_topic": "With Discord on, a passing self-test pings this topic's role, proving the whole path. Remove it once friends hold the role if tests should not ping them.",
+    "topic": "Zelda 2026",
     "urls": [
       "https://www.nintendo.com/en-ca/store/products/nintendo-switch-2-pro-controller-123674/",
       "https://www.nintendo.com/en-ca/store/products/joy-con-2-blue-light-yellow-127071/",

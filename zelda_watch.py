@@ -980,6 +980,7 @@ def validate_config(cfg):
                             "alerts will not ping anyone".format(where, topic))
 
     check_topic("discovery", (cfg.get("discovery") or {}).get("topic"))
+    check_topic("self_test", (cfg.get("self_test") or {}).get("topic"))
 
     custom = cfg.get("custom_stores") or []
     if not isinstance(custom, list):
@@ -1584,6 +1585,9 @@ def main():
             alert = stock_alert(label, [(STORES["nintendo"]["name"], detail, url)])
             alert.update(
                 to=status_to, discord=True, title="SELF-TEST " + alert["title"],
+                # On Discord, ping self_test.topic's role so the test proves
+                # the ping as well as the post.
+                topic=(cfg.get("self_test") or {}).get("topic"),
                 body="This is a test. The watcher checked an item that is in stock "
                      "right now and detected it correctly, so a real restock will "
                      "arrive exactly like this.\n\n" + alert["body"])

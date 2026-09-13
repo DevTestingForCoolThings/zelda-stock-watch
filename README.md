@@ -214,7 +214,13 @@ to post in one channel.
    and give each product its topic: `"topic": "Zelda 2026"`. Run
    `--check-config` to confirm.
 6. **Give people the role** (right-click their name → **Roles**), then run the
-   **self-test**. It posts in the channel as well as on ntfy.
+   **self-test**. It posts in the channel as well as on ntfy. With
+   `"topic": "Zelda 2026"` in the `self_test` block, it also pings that role, so
+   you can see the whole path work. Remove that line once friends hold the role,
+   if tests shouldn't ping them.
+
+Everyone who can see the channel sees every alert. People with the topic's role
+also get pinged.
 
 **Options:** `"discord": false` on a product keeps it off the server (handy for
 personal items). `"status_alerts": true` also posts the heartbeat and warnings;

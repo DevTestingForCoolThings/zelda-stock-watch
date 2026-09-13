@@ -115,6 +115,14 @@ class DeliveryTest(WatcherTestCase):
         self.assertEqual(len(self.posts), 1)
         self.assertTrue(self.posts[0][1]["embeds"][0]["title"].startswith("SELF-TEST IN STOCK"))
 
+    def test_self_test_pings_its_topic_role(self):
+        cfg = discord_cfg([zelda(links=[NIN_CA_OUT])])
+        cfg["self_test"] = {"urls": [NIN_CA_IN], "topic": "Zelda 2026"}
+        r = self.run_d(cfg, argv=["--self-test"])
+        self.assertEqual(r.rc, 0, r.out)
+        self.assertIn("<@&%s>" % ROLE, self.posts[0][1]["content"])
+        self.assertEqual(self.posts[0][1]["allowed_mentions"]["roles"], [ROLE])
+
     def test_missing_webhook_secret_still_sends_ntfy_and_says_so(self):
         cfg = discord_cfg([zelda()])
         cfg["heartbeat_hours"] = 6
