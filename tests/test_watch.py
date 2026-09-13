@@ -185,6 +185,17 @@ class CheckerTest(OfflineTestCase):
         with self.assertRaises(ValueError):
             self.check(AMZ_CA_IN)
 
+    def test_amazon_preorder_is_buyable_and_titled_as_one(self):
+        # Seen live on 2026-09-13: the Zelda console opened for pre-order on
+        # Amazon.ca for about 25 minutes, worded as a release date.
+        self.web.pages[AMZ_CA_OUT] = fixture("amazon_ca_instock.html").replace(
+            "In Stock", "This item will be released on October 29, 2026.")
+        buyable, detail = self.check(AMZ_CA_OUT)
+        self.assertTrue(buyable)
+        self.assertIn("pre-order", detail)
+        title = z.stock_alert("Console", [("Amazon", detail, AMZ_CA_OUT)])["title"]
+        self.assertEqual(title, "PRE-ORDER OPEN: Console")
+
     def test_walmart_canada(self):
         buyable, detail = self.check(WM_CA_IN)
         self.assertTrue(buyable)
@@ -340,9 +351,9 @@ class WatchlistTest(unittest.TestCase):
 class MigrationTest(OfflineTestCase):
     def test_v1_state_moves_to_links(self):
         cfg = repo_json("config.json")
+        mapping = cfg["migrate_from_v1"] = json.loads(fixture("migrate_from_v1.json"))
         state = json.loads(fixture("state_v1.json"))
         old = dict(state["targets"])
-        mapping = cfg["migrate_from_v1"]
         moved = z.migrate_state(cfg, state)
         self.assertNotIn("targets", state)
         self.assertEqual(moved, sum(1 for t in old if t in mapping or t.startswith("auto:")))
@@ -354,6 +365,7 @@ class MigrationTest(OfflineTestCase):
         cfg = repo_json("config.json")
         cfg.update(heartbeat_hours=0, politeness={"request_spacing_seconds": 0})
         cfg["discovery"]["enabled"] = False
+        cfg["migrate_from_v1"] = json.loads(fixture("migrate_from_v1.json"))
         self.web.pages.update({
             NIN_CA_CONSOLE: fixture("nintendo_ca_soldout.html"),
             NIN_CA_STAND: fixture("nintendo_ca_soldout.html"),

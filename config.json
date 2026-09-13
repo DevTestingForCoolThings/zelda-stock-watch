@@ -7,7 +7,13 @@
     "_people": "Everyone who can get alerts. Topics are secrets and never go in this file: with one person, use the NTFY_TOPIC repository secret; with several, use one NTFY_TOPICS secret holding JSON such as {\"julie\": \"topic-one\", \"sam\": \"topic-two\"}.",
     "people": ["julie"],
     "_status_alerts_to": "Who gets the heartbeat, self-test results and 'watcher problem' warnings.",
-    "status_alerts_to": ["julie"]
+    "status_alerts_to": ["julie"],
+    "_discord": "Optional Discord alerts through a channel webhook (the link goes in the DISCORD_WEBHOOK_URL secret). A product with a 'topic' pings that topic's role; see README.md, 'Discord alerts'. status_alerts also posts the heartbeat and warnings.",
+    "discord": {
+      "enabled": true,
+      "topic_roles": {"Zelda 2026": "1548538546472751206"},
+      "status_alerts": false
+    }
   },
 
   "_approved_stores": "Stores you are willing to buy from; links to any other store are skipped. Built in: nintendo, bestbuy-ca, amazon, walmart, ebgames. Add your own under custom_stores. Walmart and EB Games block GitHub's servers, so their links are only checked when the watcher runs on a home connection.",
@@ -20,6 +26,7 @@
   "products": [
     {
       "name": "Switch 2 - Zelda 40th Anniversary Edition console",
+      "topic": "Zelda 2026",
       "links": [
         "https://www.nintendo.com/en-ca/store/products/nintendo-switch-2-the-legend-of-zelda-40th-anniversary-edition-121642/",
         "https://www.bestbuy.ca/en-ca/product/20149861",
@@ -29,6 +36,7 @@
     },
     {
       "name": "Zelda 40th Pro Controller",
+      "topic": "Zelda 2026",
       "links": [
         "https://www.nintendo.com/en-ca/store/products/nintendo-switch-2-pro-controller-the-legend-of-zelda-40th-anniversary-edition-127074/",
         "https://www.bestbuy.ca/en-ca/product/20149830",
@@ -37,12 +45,14 @@
     },
     {
       "name": "Zelda 40th Pro Controller + display stand (Nintendo exclusive)",
+      "topic": "Zelda 2026",
       "links": [
         "https://www.nintendo.com/en-ca/store/products/nintendo-switch-2-pro-controller-display-stand-the-legend-of-zelda-40th-anniversary-edition-127076/"
       ]
     },
     {
       "name": "Zelda 40th carrying case + screen protector",
+      "topic": "Zelda 2026",
       "links": [
         "https://www.nintendo.com/en-ca/store/products/nintendo-switch-2-carrying-case-screen-protector-the-legend-of-zelda-40th-anniversary-edition-127073/",
         "https://www.bestbuy.ca/en-ca/product/20149880"
@@ -61,6 +71,8 @@
 
   "self_test": {
     "_comment": "Nintendo items that are normally in stock. Running the workflow with self_test ticked checks these with the real checker and sends a real push, proving detection and delivery work end to end. The heartbeat repeats it. Only one needs to be in stock to pass.",
+    "_topic": "With Discord on, a passing self-test pings this topic's role, proving the whole path. Remove it once friends hold the role if tests should not ping them.",
+    "topic": "Zelda 2026",
     "urls": [
       "https://www.nintendo.com/en-ca/store/products/nintendo-switch-2-pro-controller-123674/",
       "https://www.nintendo.com/en-ca/store/products/joy-con-2-blue-light-yellow-127071/",
@@ -73,6 +85,7 @@
     "enabled": true,
     "_comment": "Alerts when a NEW matching product page appears on the Nintendo store in 'region'. Other regions' sitemaps are scanned too, because the CA sitemap lags. With auto_watch, newly found products are then stock-watched automatically.",
     "notify": ["julie"],
+    "topic": "Zelda 2026",
     "region": "en-ca",
     "sitemaps": [
       "https://www.nintendo.com/en-ca/store/sitemap.xml",
@@ -87,19 +100,5 @@
       "soundtrack", "121642", "switch-2"
     ],
     "ignore_containing": ["-upgrade-pack-", "digital-download"]
-  },
-
-  "_migrate_from_v1": "One-time map from the old per-target ids in state.json to links, so switching formats does not re-send alerts. Safe to delete after the first run on this format.",
-  "migrate_from_v1": {
-    "nintendo-ca-console": "https://www.nintendo.com/en-ca/store/products/nintendo-switch-2-the-legend-of-zelda-40th-anniversary-edition-121642/",
-    "nintendo-ca-procontroller": "https://www.nintendo.com/en-ca/store/products/nintendo-switch-2-pro-controller-the-legend-of-zelda-40th-anniversary-edition-127074/",
-    "nintendo-ca-procontroller-stand": "https://www.nintendo.com/en-ca/store/products/nintendo-switch-2-pro-controller-display-stand-the-legend-of-zelda-40th-anniversary-edition-127076/",
-    "nintendo-ca-case": "https://www.nintendo.com/en-ca/store/products/nintendo-switch-2-carrying-case-screen-protector-the-legend-of-zelda-40th-anniversary-edition-127073/",
-    "bestbuy-ca-console": "https://www.bestbuy.ca/en-ca/product/20149861",
-    "bestbuy-ca-procontroller": "https://www.bestbuy.ca/en-ca/product/20149830",
-    "bestbuy-ca-case": "https://www.bestbuy.ca/en-ca/product/20149880",
-    "amazon-ca-console": "https://www.amazon.ca/dp/B0HJ6F8L6V",
-    "walmart-ca-console": "https://www.walmart.ca/en/ip/Nintendo-Switch-2-The-Legend-of-Zelda-40th-Anniversary-Edition/4LPRUXHD1MMQ",
-    "walmart-ca-procontroller": "https://www.walmart.ca/en/ip/Nintendo-Switch-2-Pro-Controller-The-Legend-of-Zelda-40th-Anniversary-Edition/3CVEAW67GHIT"
   }
 }

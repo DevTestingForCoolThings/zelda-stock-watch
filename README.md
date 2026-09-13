@@ -180,6 +180,70 @@ exactly what you get, heartbeats included.
 
 ---
 
+## Discord alerts
+
+Alerts can also post to a channel in your Discord server, pinging a role for
+each topic, so people who want the Zelda alerts just need the **Zelda 2026**
+role. This works alongside ntfy, or instead of it. There's no bot to host: the
+watcher posts through a *webhook*, Discord's built-in way for an outside service
+to post in one channel.
+
+**Set it up (about 5 minutes):**
+
+1. **Make a channel** for alerts, e.g. `#restock-alerts`.
+2. **Make a webhook:** hover the channel → ⚙️ **Edit Channel → Integrations →
+   Webhooks → New Webhook** → **Copy Webhook URL**. Add it as a GitHub secret
+   named **`DISCORD_WEBHOOK_URL`**. Treat it like a password: anyone who has it
+   can post in that channel. If it ever leaks, delete it in Discord and make a
+   new one.
+3. **Make a role per topic:** **Server Settings → Roles → Create Role**, e.g.
+   `Zelda 2026`, and turn on *Allow anyone to @mention this role* so the
+   webhook's ping goes through.
+4. **Copy the role's id:** **User Settings → Advanced → Developer Mode** on, then
+   in **Server Settings → Roles** right-click the role → **Copy Role ID**.
+5. **Turn it on in `config.json`:**
+
+   ```json
+   "discord": {
+     "enabled": true,
+     "topic_roles": {"Zelda 2026": "123456789012345678"},
+     "status_alerts": false
+   }
+   ```
+
+   and give each product its topic: `"topic": "Zelda 2026"`. Run
+   `--check-config` to confirm.
+6. **Give people the role** (right-click their name → **Roles**), then run the
+   **self-test**. It posts in the channel as well as on ntfy. With
+   `"topic": "Zelda 2026"` in the `self_test` block, it also pings that role, so
+   you can see the whole path work. Remove that line once friends hold the role,
+   if tests shouldn't ping them.
+
+Everyone who can see the channel sees every alert. People with the topic's role
+also get pinged.
+
+**Options:** `"discord": false` on a product keeps it off the server (handy for
+personal items). `"status_alerts": true` also posts the heartbeat and warnings;
+most people leave those on ntfy.
+
+**Staying on the right side of Discord's rules**
+
+- Posting through a webhook in your own server is the ordinary, intended use.
+  A webhook isn't a bot account, so bot verification doesn't apply.
+- The watcher can only ever ping the product's topic role. `@everyone`, `@here`
+  and pings to individual people are blocked in the code, even if a product
+  name contains them.
+- It never uses a personal Discord account. Automating one (a "self-bot") is
+  against Discord's Terms.
+- A small private server doesn't need Discord's **Community** features. Turning
+  those on adds requirements meant for public servers.
+- Moving to a bigger server later is a matter of that server's admins creating
+  the webhook and roles there, and you swapping the secret and role ids. Check
+  their rules first, and any stock bots they already run, so members don't get
+  the same alert twice.
+
+---
+
 ## What the alerts mean
 
 | Title | Meaning |
@@ -309,8 +373,8 @@ following `config.example.json` and run `--check-config`.
 
 To carry over which items were already in stock, so the switch doesn't send the
 same alerts again, add a one-time `migrate_from_v1` map of old target ids to
-links. `config.json` in this repo shows an example. Delete it after the first
-run.
+links. The map this repo used is in `tests/fixtures/migrate_from_v1.json`.
+Delete the map after the first run.
 
 ---
 
