@@ -57,10 +57,10 @@
     "https://www.amazon.ca/dp/B0HJ6F8L6V": {
       "buyable": false,
       "detail": "Currently unavailable.",
-      "fails": 5,
+      "fails": 6,
       "last_alerted": "2026-09-13T02:40:26+00:00",
       "last_error": "blocked by Amazon bot check",
-      "warned_broken": false
+      "warned_broken": true
     },
     "https://www.bestbuy.ca/en-ca/product/20149830": {
       "buyable": false,
@@ -99,8 +99,8 @@
       "warned_broken": false
     },
     "https://www.nintendo.com/en-ca/store/products/nintendo-switch-2-pro-controller-the-legend-of-zelda-40th-anniversary-edition-127074": {
-      "buyable": true,
-      "detail": "isSalableQty=True schema=InStock $124.99 - pre-order open, ships 2026-10-29",
+      "buyable": false,
+      "detail": "isSalableQty=False schema=OutOfStock $124.99",
       "fails": 0,
       "last_alerted": "2026-09-13T03:35:14+00:00",
       "last_error": null,
