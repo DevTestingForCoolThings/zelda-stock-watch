@@ -57,7 +57,7 @@
     "https://www.amazon.ca/dp/B0HJ6F8L6V": {
       "buyable": false,
       "detail": "Currently unavailable.",
-      "fails": 2,
+      "fails": 3,
       "last_alerted": "2026-09-13T02:40:26+00:00",
       "last_error": "blocked by Amazon bot check",
       "warned_broken": false
