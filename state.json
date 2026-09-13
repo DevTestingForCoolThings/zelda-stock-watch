@@ -57,9 +57,9 @@
     "amazon-ca-console": {
       "buyable": false,
       "detail": "Currently unavailable.",
-      "fails": 0,
+      "fails": 1,
       "last_alerted": "2026-09-10T21:36:33+00:00",
-      "last_error": null,
+      "last_error": "blocked by Amazon bot check",
       "warned_broken": false
     },
     "bestbuy-ca-case": {
