@@ -160,8 +160,9 @@ fixtures.
   state).
 - The owner edits `config.json` in GitHub's web editor and chose a plain on/off
   list over an Actions button. Keep store switching to one word per line.
-- The Discord self-test post has not been confirmed yet. The last attempt ran as
-  an ordinary check (no self-test box ticked).
+- Discord delivery is confirmed on a real alert. At 04:50 UTC on 2026-09-13 the
+  console opened for pre-order on Nintendo CA for under 5 minutes. The owner got
+  both the ntfy push and the Discord post with the @Zelda 2026 ping.
 - Not built yet:
   - adding products from Discord (the owner is holding off)
   - Phase 2: a home or phone runner for Walmart, a fixture refresh tool, and
