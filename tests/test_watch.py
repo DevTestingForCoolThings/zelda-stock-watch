@@ -10,6 +10,7 @@ Run from the repo root:  python3 -m unittest discover -s tests -v
 """
 
 import json
+import time
 import unittest
 import urllib.error
 
@@ -532,6 +533,53 @@ class CommandTest(OfflineTestCase):
         heartbeat = [b for _, t, b in r.sent if t == "Watcher still alive"][0]
         self.assertIn("Walmart x1 (home connection only)", heartbeat)
         self.assertIn("Self-test OK", heartbeat)
+
+
+class BotCheckTest(OfflineTestCase):
+    """A store serving bot checks is left alone, for longer each time."""
+
+    CAPTCHA = ("<html><form action='/errors/validateCaptcha'>Enter the characters you "
+               "see below</form></html>")
+
+    def test_bot_checks_pause_the_store_with_escalating_backoff(self):
+        cfg = make_cfg([{"name": "Console", "links": [AMZ_CA_OUT, NIN_CA_OUT]}])
+        self.web.pages[AMZ_CA_OUT] = self.CAPTCHA
+
+        first = self.run_main(cfg, {})
+        self.assertEqual([t for _, t, _ in first.sent], ["Paused Amazon: bot check"], first.out)
+        left = first.state["cooldowns"]["www.amazon.ca"] - time.time()
+        self.assertTrue(5.9 * 3600 < left <= 6 * 3600 + 5, left)
+        self.assertEqual(first.state["blocks"], {"www.amazon.ca": 1})
+
+        # While paused, Amazon is not contacted at all and there is no second notice.
+        asked = self.web.requests.count(AMZ_CA_OUT)
+        z._cooldowns.clear()
+        second = self.run_main(cfg, first.state)
+        self.assertEqual(self.web.requests.count(AMZ_CA_OUT), asked)
+        self.assertEqual(second.sent, [])
+        self.assertEqual(second.state["blocks"], {"www.amazon.ca": 1})
+
+        # Still blocked once the pause ends: the next pause is twice as long.
+        z._cooldowns.clear()
+        third = self.run_main(cfg, dict(second.state, cooldowns={}))
+        left = third.state["cooldowns"]["www.amazon.ca"] - time.time()
+        self.assertTrue(11.9 * 3600 < left <= 12 * 3600 + 5, left)
+        self.assertEqual(third.state["blocks"], {"www.amazon.ca": 2})
+
+        # Amazon answers normally again: the block count starts afresh.
+        self.web.pages[AMZ_CA_OUT] = fixture("amazon_ca_soldout.html")
+        z._cooldowns.clear()
+        fourth = self.run_main(cfg, dict(third.state, cooldowns={}))
+        self.assertNotIn("blocks", fourth.state)
+        self.assertEqual(fourth.sent, [])
+
+    def test_a_blocked_store_does_not_count_as_broken(self):
+        cfg = make_cfg([{"name": "Console", "links": [AMZ_CA_OUT]}])
+        self.web.pages[AMZ_CA_OUT] = self.CAPTCHA
+        r = self.run_main(cfg, {})
+        link = r.state["links"][z.link_key(AMZ_CA_OUT)]
+        self.assertEqual(link.get("fails", 0), 0)
+        self.assertIn("paused until", link["last_error"])
 
 
 if __name__ == "__main__":

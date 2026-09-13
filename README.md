@@ -329,6 +329,40 @@ home connection, a second run within 5 minutes is refused unless you add
 
 ---
 
+## If a store blocks you
+
+**What "blocked" means.** The store shows the watcher a bot check (a CAPTCHA
+page) instead of the product. It's aimed at the internet address making the
+requests, which is normally GitHub's servers, not you. The watcher never signs
+in to any store, so **your shopping account isn't involved**, and challenges
+like this are usually temporary.
+
+**What the watcher does by itself.** It pauses that store: 6 hours the first
+time, then 12, 24, and up to 48 hours if the checks keep coming. You get **one**
+low-priority *Paused …: bot check* notice per pause, and a paused store isn't
+contacted at all until the pause ends. As soon as the store answers normally
+again, the count resets. It never tries to get around a bot check.
+
+**To pause a store yourself** (takes effect on the next run). Edit `config.json`
+on GitHub (open the file, click the ✏️ pencil, then **Commit changes**):
+
+- **One link:** write it as
+  `{"url": "https://www.amazon.ca/dp/...", "enabled": false}`
+- **A whole store:** remove its id from `approved_stores`. `--check-config`
+  then lists its links as `SKIPPED - not approved`.
+
+**Coming back.** Give it a few days. Re-enable **one** link, then run the
+workflow by hand with **dry run** ticked and look at the log. If it still says
+*bot check*, pause it again and wait longer. Keep the number of links at that
+store small: every link is another request every 5 minutes.
+
+**If your own browser starts showing CAPTCHAs** on that store, your home
+connection has been flagged. That can only come from running the watcher on
+your own computer. Stop local runs for a day or two; answering the CAPTCHA
+yourself in the browser is fine.
+
+---
+
 ## Being a good citizen (and not getting blocked)
 
 - **Request spacing**: at least `politeness.request_spacing_seconds` (default 3)
@@ -338,6 +372,8 @@ home connection, a second run within 5 minutes is refused unless you add
   `politeness.default_cooldown_minutes` (default 30), and remembers this across
   runs. It never retries with a different client, because ignoring a rate limit
   is how a slowdown becomes a block. A paused site shows as paused, not broken.
+- **Bot checks pause the store** for 6 hours, doubling up to 2 days while they
+  continue. See [If a store blocks you](#if-a-store-blocks-you).
 - **Discovery runs hourly**, not on every check (`discovery.every_minutes`),
   because it downloads large sitemaps.
 - `nintendo.com/robots.txt` allows general crawling.

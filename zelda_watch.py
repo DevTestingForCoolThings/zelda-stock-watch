@@ -95,6 +95,16 @@ class RateLimited(Exception):
     """A host asked us to slow down, or is still on cooldown from doing so."""
 
 
+class BotChecked(ValueError):
+    """A store served a bot check (a CAPTCHA page) instead of the product."""
+
+
+# How long to leave a store alone after it serves a bot check: 6 hours the
+# first time, doubling while it keeps happening. Knocking on a store that is
+# already challenging you is how a temporary block becomes a long one.
+BLOCK_COOLDOWN_HOURS = (6, 12, 24, 48)
+
+
 def apply_politeness(cfg):
     """Take spacing and cooldown settings from config.json, if present."""
     global REQUEST_SPACING_SECONDS, DEFAULT_COOLDOWN_MINUTES
@@ -111,7 +121,7 @@ def _paused(host):
     # Deliberately stable across runs (an absolute time, not "N min left"), so
     # a paused link does not rewrite state.json - and commit - every run.
     until = datetime.fromtimestamp(_cooldowns[host], timezone.utc)
-    return RateLimited("{} rate-limited us; paused until {} UTC".format(
+    return RateLimited("{} is paused until {} UTC".format(
         host, until.strftime("%Y-%m-%d %H:%M")))
 
 
@@ -247,6 +257,8 @@ def fetch_with_fallbacks(url, required_marker):
             notes.append("{}: no {} ({}b)".format(name, required_marker, len(candidate)))
             continue
         return candidate, name
+    if any("bot challenge" in n for n in notes):
+        raise BotChecked("every fetch strategy failed, with bot checks [{}]".format("; ".join(notes)))
     raise ValueError("all fetch strategies failed [{}]".format("; ".join(notes)))
 
 
@@ -414,7 +426,7 @@ def check_amazon(link):
         r"(To discuss automated access|Enter the characters you see below"
         r"|/errors/validateCaptcha)", html, re.I)
     if blocked:
-        raise ValueError("blocked by Amazon bot check")
+        raise BotChecked("blocked by Amazon bot check")
 
     if not re.search(r'id="(add-to-cart-button|outOfStock|availability)"', html):
         raise ValueError("no add-to-cart or outOfStock marker (layout changed?)")
@@ -599,7 +611,7 @@ def check_generic(link):
             raise ValueError("not a Shopify product link (no /products/<handle>.js)")
     html = fetch(url, browser_like=True)
     if re.search(BLOCK_MARKERS, html, re.I):
-        raise ValueError("the shop served a bot check instead of the product page")
+        raise BotChecked("the shop served a bot check instead of the product page")
     if method in ("auto", "text"):
         result = _text_status(html, store)
         if result is not None:
@@ -1651,8 +1663,30 @@ def main():
     for w in watch:
         st = links_state.setdefault(w["key"], {})
         label = "{} ({})".format(w["product"], w["store"]["name"])
+        host = _host(w["url"])
         try:
+            # A paused store is not contacted at all until its pause ends.
+            if _cooldowns.get(host, 0) > time.time():
+                raise _paused(host)
             buyable, detail = w["store"]["checker"](w)
+        except BotChecked as e:
+            blocks = state.setdefault("blocks", {})
+            blocks[host] = blocks.get(host, 0) + 1
+            hours = BLOCK_COOLDOWN_HOURS[min(blocks[host], len(BLOCK_COOLDOWN_HOURS)) - 1]
+            _cooldowns[host] = int(time.time()) + hours * 3600
+            st["last_error"] = "{}; {}".format(e, _paused(host))[:300]
+            log("{}: BOT CHECK - pausing {} for {}h".format(label, host, hours))
+            alerts.append({
+                "to": status_to, "title": "Paused {}: bot check".format(w["store"]["name"]),
+                "body": "{} is showing bot checks (CAPTCHAs) instead of product pages, so the "
+                        "watcher is leaving it alone for {} hours, until {} UTC. Nothing is "
+                        "needed from you: it tries again by itself, and if the checks continue "
+                        "the pause doubles, up to 2 days. Your shopping account is not "
+                        "involved; the watcher never signs in.".format(
+                            w["store"]["name"], hours,
+                            datetime.fromtimestamp(_cooldowns[host], timezone.utc).strftime("%Y-%m-%d %H:%M")),
+                "priority": "low", "tags": "no_entry", "click": w["url"]})
+            continue
         except RateLimited as e:
             # Not a breakage: the store asked us to slow down and we are
             # complying, so it does not count toward the "not working" alert.
@@ -1675,6 +1709,11 @@ def main():
                             "link is still being checked.".format(fails, e),
                     "priority": "low", "tags": "warning", "click": w["url"]})
             continue
+
+        # A store that answers normally again starts its block count afresh.
+        blocks = state.get("blocks")
+        if blocks and blocks.pop(host, None) is not None and not blocks:
+            state.pop("blocks")
 
         was = st.get("buyable")
         st["fails"] = 0
