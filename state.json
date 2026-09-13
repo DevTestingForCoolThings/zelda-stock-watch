@@ -101,9 +101,9 @@
     "https://www.nintendo.com/en-ca/store/products/nintendo-switch-2-pro-controller-the-legend-of-zelda-40th-anniversary-edition-127074": {
       "buyable": false,
       "detail": "isSalableQty=False schema=OutOfStock $124.99",
-      "fails": 0,
+      "fails": 1,
       "last_alerted": "2026-09-13T03:35:14+00:00",
-      "last_error": null,
+      "last_error": "HTTP Error 404: Not Found",
       "warned_broken": false
     },
     "https://www.nintendo.com/en-ca/store/products/nintendo-switch-2-the-legend-of-zelda-40th-anniversary-edition-121642": {
