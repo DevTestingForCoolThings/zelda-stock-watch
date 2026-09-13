@@ -80,7 +80,9 @@ jobs:
       - name: Save state
         # state.json only changes when something meaningful changed, so this
         # commits on real transitions rather than once every five minutes.
-        if: ${{ !inputs.diagnose && !inputs.self_test }}
+        # A dry run sends nothing, so saving its state would mark a restock as
+        # already alerted and the real alert would never go out.
+        if: ${{ !inputs.diagnose && !inputs.self_test && !inputs.dry_run }}
         run: |
           if [[ -n "$(git status --porcelain state.json)" ]]; then
             git config user.name  "zelda-watch-bot"

@@ -2,6 +2,16 @@
   "version": 2,
   "_comment": "What to watch and who to tell. Everything is explained in README.md. After editing, run: python3 zelda_watch.py --check-config",
 
+  "_stores": "Turn each store on or off. \"on\" checks it every 5 minutes, \"off\" skips it, and something like \"every 30 minutes\" or \"every 2 hours\" checks it less often, which makes a block less likely. A store left out of this list is off. Walmart and EB Games block GitHub's servers, so they are only checked from a home connection, even when on. Shops you add under custom_stores go in this list too.",
+  "stores": {
+    "nintendo":   "on",
+    "bestbuy-ca": "on",
+    "amazon":     "off",
+    "walmart":    "on",
+    "ebgames":    "off",
+    "_note": "Amazon: off since 13 Sep 2026 because it was showing bot checks to GitHub. After a few days, try \"every 30 minutes\"."
+  },
+
   "notifications": {
     "server": "https://ntfy.sh",
     "_people": "Everyone who can get alerts. Topics are secrets and never go in this file: with one person, use the NTFY_TOPIC repository secret; with several, use one NTFY_TOPICS secret holding JSON such as {\"julie\": \"topic-one\", \"sam\": \"topic-two\"}.",
@@ -16,9 +26,6 @@
     }
   },
 
-  "_approved_stores": "Stores you are willing to buy from; links to any other store are skipped. Built in: nintendo, bestbuy-ca, amazon, walmart, ebgames. Add your own under custom_stores. Walmart and EB Games block GitHub's servers, so their links are only checked when the watcher runs on a home connection.",
-  "approved_stores": ["nintendo", "bestbuy-ca", "amazon", "walmart"],
-
   "_custom_stores": "Stores not built in, for niche products. See README.md: 'Adding your own store'. Check a link with: python3 zelda_watch.py --check-link URL",
   "custom_stores": [],
 
@@ -30,7 +37,7 @@
       "links": [
         "https://www.nintendo.com/en-ca/store/products/nintendo-switch-2-the-legend-of-zelda-40th-anniversary-edition-121642/",
         "https://www.bestbuy.ca/en-ca/product/20149861",
-        {"url": "https://www.amazon.ca/dp/B0HJ6F8L6V", "enabled": false, "_why": "Paused 2026-09-13: Amazon started blocking. See README, 'If a store blocks you'."},
+        "https://www.amazon.ca/dp/B0HJ6F8L6V",
         "https://www.walmart.ca/en/ip/Nintendo-Switch-2-The-Legend-of-Zelda-40th-Anniversary-Edition/4LPRUXHD1MMQ"
       ]
     },

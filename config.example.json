@@ -2,6 +2,16 @@
   "version": 2,
   "_comment": "An example to copy. Save your own as config.json, then check it with: python3 zelda_watch.py --check-config",
 
+  "_stores": "Turn each store on or off. \"on\" checks it every 5 minutes, \"off\" skips it, and something like \"every 30 minutes\" or \"every 2 hours\" checks it less often, which makes a block less likely. A store left out of this list is off. Walmart and EB Games block GitHub's servers, so they are only checked from a home connection, even when on. Shops you add under custom_stores go in this list too.",
+  "stores": {
+    "nintendo":          "on",
+    "bestbuy-ca":        "on",
+    "amazon":            "every 30 minutes",
+    "walmart":           "off",
+    "ebgames":           "off",
+    "limited-run-games": "on"
+  },
+
   "notifications": {
     "server": "https://ntfy.sh",
     "_people": "Everyone who can get alerts. Topics are secrets and never go in this file: with one person, put the topic in the NTFY_TOPIC repository secret; with several, use one NTFY_TOPICS secret holding JSON such as {\"me\": \"my-long-random-topic\", \"sam\": \"sams-topic\"}.",
@@ -15,9 +25,6 @@
       "status_alerts": false
     }
   },
-
-  "_approved_stores": "Stores you are willing to buy from; links to any other store are skipped. Built in: nintendo, bestbuy-ca, amazon, walmart, ebgames. Walmart and EB Games block GitHub's servers, so they only work when the watcher runs on a home connection.",
-  "approved_stores": ["nintendo", "bestbuy-ca", "amazon", "limited-run-games"],
 
   "_custom_stores": "Shops that are not built in. Anything on Shopify, and most shops that publish schema.org data, is read automatically. If --check-link says it cannot read a shop, add in_stock_text or sold_out_text: words the product page shows.",
   "custom_stores": [
