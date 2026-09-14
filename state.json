@@ -107,10 +107,10 @@
       "warned_broken": false
     },
     "https://www.nintendo.com/en-ca/store/products/nintendo-switch-2-the-legend-of-zelda-40th-anniversary-edition-121642": {
-      "buyable": false,
-      "detail": "isSalableQty=False schema=OutOfStock $709.99",
+      "buyable": true,
+      "detail": "isSalableQty=True schema=InStock $709.99 - pre-order open, ships 2026-10-29",
       "fails": 0,
-      "last_alerted": "2026-09-14T20:55:10+00:00",
+      "last_alerted": "2026-09-14T21:50:11+00:00",
       "last_error": null,
       "warned_broken": false
     },
