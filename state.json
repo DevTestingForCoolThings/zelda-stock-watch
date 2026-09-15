@@ -92,8 +92,8 @@
       "warned_broken": false
     },
     "https://www.nintendo.com/en-ca/store/products/nintendo-switch-2-pro-controller-display-stand-the-legend-of-zelda-40th-anniversary-edition-127076": {
-      "buyable": true,
-      "detail": "isSalableQty=True schema=InStock $139.99 - pre-order open, ships 2026-10-29",
+      "buyable": false,
+      "detail": "isSalableQty=False schema=OutOfStock $139.99",
       "fails": 0,
       "last_alerted": "2026-09-15T12:20:36+00:00",
       "last_error": null,
