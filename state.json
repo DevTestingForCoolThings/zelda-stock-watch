@@ -52,7 +52,7 @@
     "https://www.nintendo.com/en-ca/store/products/zelda-loftwing-the-legend-of-zelda-skyward-sword-hd-amiibo/"
   ],
   "last_discovery": "2026-09-15T17:15:14+00:00",
-  "last_heartbeat": "2026-09-15T11:45:21+00:00",
+  "last_heartbeat": "2026-09-15T17:45:24+00:00",
   "links": {
     "https://www.amazon.ca/dp/B0HJ6F8L6V": {
       "buyable": false,
@@ -108,8 +108,8 @@
       "warned_broken": false
     },
     "https://www.nintendo.com/en-ca/store/products/nintendo-switch-2-the-legend-of-zelda-40th-anniversary-edition-121642": {
-      "buyable": true,
-      "detail": "isSalableQty=True schema=InStock $709.99 - pre-order open, ships 2026-10-29",
+      "buyable": false,
+      "detail": "isSalableQty=False schema=OutOfStock $709.99",
       "fails": 0,
       "last_alerted": "2026-09-15T17:40:11+00:00",
       "last_error": null,
