@@ -15,7 +15,8 @@
   "notifications": {
     "server": "https://ntfy.sh",
     "_people": "Everyone who can get alerts. Topics are secrets and never go in this file: with one person, use the NTFY_TOPIC repository secret; with several, use one NTFY_TOPICS secret holding JSON such as {\"julie\": \"topic-one\", \"sam\": \"topic-two\"}.",
-    "people": ["julie"],
+    "people": ["julie", "controllers"],
+    "_controllers": "A second subscription for Julie: the topic named 'controllers' in the NTFY_TOPICS secret gets only the Pro Controller and the controller + stand combo, which restock more often than the console. Julie's own topic still gets everything, so her friend's subscription is unchanged.",
     "_status_alerts_to": "Who gets the heartbeat, self-test results and 'watcher problem' warnings.",
     "status_alerts_to": ["julie"],
     "_discord": "Optional Discord alerts through a channel webhook (the link goes in the DISCORD_WEBHOOK_URL secret). A product with a 'topic' pings that topic's role; see README.md, 'Discord alerts'. status_alerts also posts the heartbeat and warnings.",
@@ -33,6 +34,7 @@
   "products": [
     {
       "name": "Switch 2 - Zelda 40th Anniversary Edition console",
+      "notify": ["julie"],
       "topic": "Zelda 2026",
       "links": [
         "https://www.nintendo.com/en-ca/store/products/nintendo-switch-2-the-legend-of-zelda-40th-anniversary-edition-121642/",
@@ -43,6 +45,7 @@
     },
     {
       "name": "Zelda 40th Pro Controller",
+      "notify": ["julie", "controllers"],
       "topic": "Zelda 2026",
       "links": [
         "https://www.nintendo.com/en-ca/store/products/nintendo-switch-2-pro-controller-the-legend-of-zelda-40th-anniversary-edition-127074/",
@@ -52,6 +55,7 @@
     },
     {
       "name": "Zelda 40th Pro Controller + display stand (Nintendo exclusive)",
+      "notify": ["julie", "controllers"],
       "topic": "Zelda 2026",
       "links": [
         "https://www.nintendo.com/en-ca/store/products/nintendo-switch-2-pro-controller-display-stand-the-legend-of-zelda-40th-anniversary-edition-127076/"
@@ -59,6 +63,7 @@
     },
     {
       "name": "Zelda 40th carrying case + screen protector",
+      "notify": ["julie"],
       "topic": "Zelda 2026",
       "links": [
         "https://www.nintendo.com/en-ca/store/products/nintendo-switch-2-carrying-case-screen-protector-the-legend-of-zelda-40th-anniversary-edition-127073/",

@@ -281,6 +281,17 @@ class ConfigTest(unittest.TestCase):
         self.assertEqual(errors, [])
         self.assertEqual(warnings, [])
 
+    def test_live_config_routes_the_controllers_topic(self):
+        # "controllers" is a second subscription of Julie's, for the two
+        # controller products only; the console must never reach it.
+        cfg = repo_json("config.json")
+        watch, _, _ = z.build_watchlist(cfg, {}, z.all_stores(cfg), True)
+        self.assertTrue(watch)
+        for w in watch:
+            self.assertIn("julie", w["notify"], w["product"])
+            self.assertEqual("Controller" in w["product"], "controllers" in w["notify"],
+                             w["product"])
+
     def test_example_config_is_valid(self):
         errors, warnings = z.validate_config(repo_json("config.example.json"))
         self.assertEqual(errors, [])

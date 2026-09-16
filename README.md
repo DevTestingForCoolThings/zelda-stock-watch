@@ -206,6 +206,15 @@ Several people can share one watcher, and each gets only the products they care 
 4. On each product, `"notify": ["sam"]` means only Sam, `["julie"]` means only
    you, and leaving it out means everyone.
 
+**A second code for yourself.** The same mechanism gives you more than one
+subscription. Add a name for it (say `"controllers"`), give that name its own
+topic in `NTFY_TOPICS`, and list it on only the products you want:
+`"notify": ["julie", "controllers"]`. Subscribe to that topic in ntfy and you'll
+get those products and nothing else. That's useful when one product restocks far
+more often than the rest, or when someone wants only part of what you watch.
+Heartbeats go only to `status_alerts_to`, so a topic like this stays silent until
+something it watches comes in stock.
+
 `status_alerts_to` decides who gets the heartbeat and the "watcher problem"
 warnings. Usually that's just whoever looks after the repo. Topics are never
 stored in the repo or printed in the logs.
