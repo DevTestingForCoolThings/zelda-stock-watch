@@ -51,7 +51,7 @@
     "https://www.nintendo.com/en-ca/store/products/the-legend-of-zelda-tears-of-the-kingdom-the-complete-official-guide-collectors-edition-120014/",
     "https://www.nintendo.com/en-ca/store/products/zelda-loftwing-the-legend-of-zelda-skyward-sword-hd-amiibo/"
   ],
-  "last_discovery": "2026-09-16T02:50:12+00:00",
+  "last_discovery": "2026-09-16T03:55:08+00:00",
   "last_heartbeat": "2026-09-15T23:50:20+00:00",
   "links": {
     "https://www.amazon.ca/dp/B0HJ6F8L6V": {
@@ -108,10 +108,10 @@
       "warned_broken": false
     },
     "https://www.nintendo.com/en-ca/store/products/nintendo-switch-2-the-legend-of-zelda-40th-anniversary-edition-121642": {
-      "buyable": false,
-      "detail": "isSalableQty=False schema=OutOfStock $709.99",
+      "buyable": true,
+      "detail": "isSalableQty=True schema=InStock $709.99 - pre-order open, ships 2026-10-29",
       "fails": 0,
-      "last_alerted": "2026-09-15T22:35:27+00:00",
+      "last_alerted": "2026-09-16T03:55:23+00:00",
       "last_error": null,
       "warned_broken": false
     },
