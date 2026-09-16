@@ -212,8 +212,9 @@ topic in `NTFY_TOPICS`, and list it on only the products you want:
 `"notify": ["julie", "controllers"]`. Subscribe to that topic in ntfy and you'll
 get those products and nothing else. That's useful when one product restocks far
 more often than the rest, or when someone wants only part of what you watch.
-Heartbeats go only to `status_alerts_to`, so a topic like this stays silent until
-something it watches comes in stock.
+Heartbeats go only to `status_alerts_to`. Leave the name out of that list and the
+topic stays silent until something it watches comes in stock; add it and the topic
+also gets the 6-hourly all-clear, so silence on it means the watcher is alive.
 
 `status_alerts_to` decides who gets the heartbeat and the "watcher problem"
 warnings. Usually that's just whoever looks after the repo. Topics are never

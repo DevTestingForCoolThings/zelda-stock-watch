@@ -16,9 +16,9 @@
     "server": "https://ntfy.sh",
     "_people": "Everyone who can get alerts. Topics are secrets and never go in this file: with one person, use the NTFY_TOPIC repository secret; with several, use one NTFY_TOPICS secret holding JSON such as {\"julie\": \"topic-one\", \"sam\": \"topic-two\"}.",
     "people": ["julie", "controllers"],
-    "_controllers": "A second subscription for Julie: the topic named 'controllers' in the NTFY_TOPICS secret gets only the Pro Controller and the controller + stand combo, which restock more often than the console. Julie's own topic still gets everything, so her friend's subscription is unchanged.",
+    "_controllers": "A second subscription for Julie: the topic named 'controllers' in the NTFY_TOPICS secret gets only the Pro Controller and the controller + stand combo, which restock more often than the console. Julie's own topic still gets everything, so her friend's subscription is unchanged. It is in status_alerts_to as well, so it gets the heartbeat and any watcher warnings, and silence on it is trustworthy.",
     "_status_alerts_to": "Who gets the heartbeat, self-test results and 'watcher problem' warnings.",
-    "status_alerts_to": ["julie"],
+    "status_alerts_to": ["julie", "controllers"],
     "_discord": "Optional Discord alerts through a channel webhook (the link goes in the DISCORD_WEBHOOK_URL secret). A product with a 'topic' pings that topic's role; see README.md, 'Discord alerts'. status_alerts also posts the heartbeat and warnings.",
     "discord": {
       "enabled": true,
