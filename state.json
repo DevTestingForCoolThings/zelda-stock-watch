@@ -72,8 +72,8 @@
     "https://www.bestbuy.ca/en-ca/product/20149861": {
       "buyable": false,
       "detail": "shipping=SoldOutOnline pickup=NotAvailable",
-      "fails": 1,
-      "last_error": "HTTP Error 502: Bad Gateway",
+      "fails": 0,
+      "last_error": null,
       "warned_broken": false
     },
     "https://www.bestbuy.ca/en-ca/product/20149880": {
