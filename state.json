@@ -86,7 +86,7 @@
     },
     "https://www.nintendo.com/en-ca/store/products/nintendo-switch-2-carrying-case-screen-protector-the-legend-of-zelda-40th-anniversary-edition-127073": {
       "buyable": true,
-      "detail": "isSalableQty=True schema=InStock $49.99 - pre-order open, ships 2026-10-29",
+      "detail": "isSalableQty=True schema=InStock $49.99",
       "fails": 0,
       "last_alerted": "2026-09-16T19:20:20+00:00",
       "last_error": null,
