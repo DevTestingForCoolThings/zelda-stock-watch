@@ -64,7 +64,7 @@
     },
     "https://www.bestbuy.ca/en-ca/product/20149830": {
       "buyable": false,
-      "detail": "shipping=SoldOutOnline pickup=NotAvailable",
+      "detail": "shipping=Unknown pickup=Unknown",
       "fails": 0,
       "last_error": null,
       "warned_broken": false
