@@ -71,14 +71,14 @@
     },
     "https://www.bestbuy.ca/en-ca/product/20149861": {
       "buyable": false,
-      "detail": "shipping=SoldOutOnline pickup=NotAvailable",
+      "detail": "shipping=Unknown pickup=Unknown",
       "fails": 0,
       "last_error": null,
       "warned_broken": false
     },
     "https://www.bestbuy.ca/en-ca/product/20149880": {
-      "buyable": true,
-      "detail": "shipping=Preorder pickup=Preorder",
+      "buyable": false,
+      "detail": "shipping=Unknown pickup=Unknown",
       "fails": 0,
       "last_alerted": "2026-09-16T21:30:43+00:00",
       "last_error": null,
