@@ -52,7 +52,7 @@
     "https://www.nintendo.com/en-ca/store/products/zelda-loftwing-the-legend-of-zelda-skyward-sword-hd-amiibo/"
   ],
   "last_discovery": "2026-10-02T19:45:14+00:00",
-  "last_heartbeat": "2026-10-02T14:35:36+00:00",
+  "last_heartbeat": "2026-10-02T20:40:20+00:00",
   "links": {
     "https://www.amazon.ca/dp/B0HJ6F8L6V": {
       "buyable": false,
@@ -85,8 +85,8 @@
       "warned_broken": false
     },
     "https://www.nintendo.com/en-ca/store/products/nintendo-switch-2-carrying-case-screen-protector-the-legend-of-zelda-40th-anniversary-edition-127073": {
-      "buyable": true,
-      "detail": "isSalableQty=True schema=InStock $49.99 - pre-order open, ships 2026-10-29",
+      "buyable": false,
+      "detail": "isSalableQty=False schema=OutOfStock $49.99",
       "fails": 0,
       "last_alerted": "2026-10-02T20:30:26+00:00",
       "last_error": null,
