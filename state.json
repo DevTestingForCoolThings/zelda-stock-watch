@@ -85,34 +85,34 @@
       "warned_broken": false
     },
     "https://www.nintendo.com/en-ca/store/products/nintendo-switch-2-carrying-case-screen-protector-the-legend-of-zelda-40th-anniversary-edition-127073": {
-      "buyable": false,
-      "detail": "isSalableQty=False schema=OutOfStock $49.99",
+      "buyable": true,
+      "detail": "isSalableQty=True schema=InStock $49.99 - pre-order open, ships 2026-10-29",
       "fails": 0,
-      "last_alerted": "2026-10-03T20:45:24+00:00",
+      "last_alerted": "2026-10-03T21:15:28+00:00",
       "last_error": null,
       "warned_broken": false
     },
     "https://www.nintendo.com/en-ca/store/products/nintendo-switch-2-pro-controller-display-stand-the-legend-of-zelda-40th-anniversary-edition-127076": {
-      "buyable": false,
-      "detail": "isSalableQty=False schema=OutOfStock $139.99",
+      "buyable": true,
+      "detail": "isSalableQty=True schema=InStock $139.99 - pre-order open, ships 2026-10-29",
       "fails": 0,
-      "last_alerted": "2026-10-03T19:20:17+00:00",
+      "last_alerted": "2026-10-03T21:15:25+00:00",
       "last_error": null,
       "warned_broken": false
     },
     "https://www.nintendo.com/en-ca/store/products/nintendo-switch-2-pro-controller-the-legend-of-zelda-40th-anniversary-edition-127074": {
-      "buyable": false,
-      "detail": "isSalableQty=False schema=OutOfStock $124.99",
+      "buyable": true,
+      "detail": "isSalableQty=True schema=InStock $124.99 - pre-order open, ships 2026-10-29",
       "fails": 0,
-      "last_alerted": "2026-10-03T21:00:22+00:00",
+      "last_alerted": "2026-10-03T21:15:22+00:00",
       "last_error": null,
       "warned_broken": false
     },
     "https://www.nintendo.com/en-ca/store/products/nintendo-switch-2-the-legend-of-zelda-40th-anniversary-edition-121642": {
-      "buyable": false,
-      "detail": "isSalableQty=False schema=OutOfStock $709.99",
+      "buyable": true,
+      "detail": "isSalableQty=True schema=InStock $709.99 - pre-order open, ships 2026-10-29",
       "fails": 0,
-      "last_alerted": "2026-10-03T20:50:11+00:00",
+      "last_alerted": "2026-10-03T21:15:19+00:00",
       "last_error": null,
       "warned_broken": false
     },
