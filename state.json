@@ -64,7 +64,7 @@
     },
     "https://www.bestbuy.ca/en-ca/product/20149830": {
       "buyable": false,
-      "detail": "shipping=NotAvailable pickup=NotAvailable",
+      "detail": "shipping=SoldOutOnline pickup=NotAvailable",
       "fails": 0,
       "last_error": null,
       "warned_broken": false
@@ -78,7 +78,7 @@
     },
     "https://www.bestbuy.ca/en-ca/product/20149880": {
       "buyable": false,
-      "detail": "shipping=NotAvailable pickup=NotAvailable",
+      "detail": "shipping=SoldOutOnline pickup=NotAvailable",
       "fails": 0,
       "last_alerted": "2026-09-24T06:45:21+00:00",
       "last_error": null,
@@ -109,10 +109,10 @@
       "warned_broken": false
     },
     "https://www.nintendo.com/en-ca/store/products/nintendo-switch-2-the-legend-of-zelda-40th-anniversary-edition-121642": {
-      "buyable": false,
-      "detail": "isSalableQty=False schema=OutOfStock $709.99",
+      "buyable": true,
+      "detail": "isSalableQty=True schema=InStock $709.99 - pre-order open, ships 2026-10-29",
       "fails": 0,
-      "last_alerted": "2026-10-08T07:25:10+00:00",
+      "last_alerted": "2026-10-08T07:50:12+00:00",
       "last_error": null,
       "warned_broken": false
     },
