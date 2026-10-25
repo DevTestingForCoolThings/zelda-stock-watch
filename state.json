@@ -79,9 +79,9 @@
     "https://www.bestbuy.ca/en-ca/product/20149880": {
       "buyable": false,
       "detail": "shipping=SoldOutOnline pickup=NotAvailable",
-      "fails": 0,
+      "fails": 1,
       "last_alerted": "2026-09-24T06:45:21+00:00",
-      "last_error": null,
+      "last_error": "<urlopen error _ssl.c:1063: The handshake operation timed out>",
       "warned_broken": false
     },
     "https://www.nintendo.com/en-ca/store/products/nintendo-switch-2-carrying-case-screen-protector-the-legend-of-zelda-40th-anniversary-edition-127073": {
