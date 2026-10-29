@@ -79,8 +79,8 @@
       "warned_broken": false
     },
     "https://www.bestbuy.ca/en-ca/product/20149880": {
-      "buyable": true,
-      "detail": "shipping=InStock pickup=NotAvailable",
+      "buyable": false,
+      "detail": "shipping=SoldOutOnline pickup=NotAvailable",
       "fails": 0,
       "last_alerted": "2026-10-29T15:20:22+00:00",
       "last_error": null,
