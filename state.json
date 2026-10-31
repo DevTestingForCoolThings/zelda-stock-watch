@@ -64,7 +64,7 @@
     },
     "https://www.bestbuy.ca/en-ca/product/20149830": {
       "buyable": false,
-      "detail": "shipping=SoldOutOnline pickup=NotAvailable",
+      "detail": "shipping=NotAvailable pickup=NotAvailable",
       "fails": 0,
       "last_alerted": "2026-10-29T15:20:16+00:00",
       "last_error": null,
@@ -72,7 +72,7 @@
     },
     "https://www.bestbuy.ca/en-ca/product/20149861": {
       "buyable": false,
-      "detail": "shipping=SoldOutOnline pickup=NotAvailable",
+      "detail": "shipping=NotAvailable pickup=NotAvailable",
       "fails": 0,
       "last_alerted": "2026-10-29T15:20:13+00:00",
       "last_error": null,
@@ -80,7 +80,7 @@
     },
     "https://www.bestbuy.ca/en-ca/product/20149880": {
       "buyable": false,
-      "detail": "shipping=SoldOutOnline pickup=NotAvailable",
+      "detail": "shipping=NotAvailable pickup=NotAvailable",
       "fails": 0,
       "last_alerted": "2026-10-29T15:20:22+00:00",
       "last_error": null,
