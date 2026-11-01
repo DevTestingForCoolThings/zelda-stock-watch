@@ -73,9 +73,9 @@
     "https://www.bestbuy.ca/en-ca/product/20149861": {
       "buyable": false,
       "detail": "shipping=SoldOutOnline pickup=NotAvailable",
-      "fails": 0,
+      "fails": 1,
       "last_alerted": "2026-10-29T15:20:13+00:00",
-      "last_error": null,
+      "last_error": "<urlopen error _ssl.c:1063: The handshake operation timed out>",
       "warned_broken": false
     },
     "https://www.bestbuy.ca/en-ca/product/20149880": {
