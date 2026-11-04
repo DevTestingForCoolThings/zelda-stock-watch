@@ -2,7 +2,8 @@
   "auto_watch": [
     "https://www.nintendo.com/en-ca/store/products/nintendo-switch-2-carrying-case-screen-protector-the-legend-of-zelda-40th-anniversary-edition-127073/",
     "https://www.nintendo.com/en-ca/store/products/nintendo-switch-2-pro-controller-display-stand-the-legend-of-zelda-40th-anniversary-edition-127076/",
-    "https://www.nintendo.com/en-ca/store/products/nintendo-switch-2-pro-controller-the-legend-of-zelda-40th-anniversary-edition-127074/"
+    "https://www.nintendo.com/en-ca/store/products/nintendo-switch-2-pro-controller-the-legend-of-zelda-40th-anniversary-edition-127074/",
+    "https://www.nintendo.com/en-ca/store/products/the-legend-of-zelda-ocarina-of-time-the-legend-of-zelda-40th-anniversary-pin-set-129838/"
   ],
   "discovered": [
     "https://www.nintendo.com/en-ca/store/products/amiibo-bokoblin-the-legend-of-zelda-breath-of-the-wild-series-104670/",
@@ -46,12 +47,13 @@
     "https://www.nintendo.com/en-ca/store/products/the-legend-of-zelda-breath-of-the-wild-nintendo-switch-2-edition-121523/",
     "https://www.nintendo.com/en-ca/store/products/the-legend-of-zelda-breath-of-the-wild-nintendo-switch-2-edition-switch-2/",
     "https://www.nintendo.com/en-ca/store/products/the-legend-of-zelda-ocarina-of-time-switch-2/",
+    "https://www.nintendo.com/en-ca/store/products/the-legend-of-zelda-ocarina-of-time-the-legend-of-zelda-40th-anniversary-pin-set-129838/",
     "https://www.nintendo.com/en-ca/store/products/the-legend-of-zelda-tears-of-the-kingdom-collector-s-edition-114529/",
     "https://www.nintendo.com/en-ca/store/products/the-legend-of-zelda-tears-of-the-kingdom-nintendo-switch-2-edition-switch-2/",
     "https://www.nintendo.com/en-ca/store/products/the-legend-of-zelda-tears-of-the-kingdom-the-complete-official-guide-collectors-edition-120014/",
     "https://www.nintendo.com/en-ca/store/products/zelda-loftwing-the-legend-of-zelda-skyward-sword-hd-amiibo/"
   ],
-  "last_discovery": "2026-11-04T17:10:14+00:00",
+  "last_discovery": "2026-11-04T18:10:14+00:00",
   "last_heartbeat": "2026-11-04T13:15:23+00:00",
   "links": {
     "https://www.amazon.ca/dp/B0HJ6F8L6V": {
@@ -115,6 +117,14 @@
       "detail": "isSalableQty=False schema=OutOfStock $709.99",
       "fails": 0,
       "last_alerted": "2026-10-31T03:55:10+00:00",
+      "last_error": null,
+      "warned_broken": false
+    },
+    "https://www.nintendo.com/en-ca/store/products/the-legend-of-zelda-ocarina-of-time-the-legend-of-zelda-40th-anniversary-pin-set-129838": {
+      "buyable": true,
+      "detail": "isSalableQty=True schema=InStock",
+      "fails": 0,
+      "last_alerted": "2026-11-04T18:10:41+00:00",
       "last_error": null,
       "warned_broken": false
     },
