@@ -53,7 +53,7 @@
     "https://www.nintendo.com/en-ca/store/products/the-legend-of-zelda-tears-of-the-kingdom-the-complete-official-guide-collectors-edition-120014/",
     "https://www.nintendo.com/en-ca/store/products/zelda-loftwing-the-legend-of-zelda-skyward-sword-hd-amiibo/"
   ],
-  "last_discovery": "2026-11-06T03:20:12+00:00",
+  "last_discovery": "2026-11-06T04:25:10+00:00",
   "last_heartbeat": "2026-11-06T01:25:23+00:00",
   "links": {
     "https://www.amazon.ca/dp/B0HJ6F8L6V": {
@@ -121,8 +121,8 @@
       "warned_broken": false
     },
     "https://www.nintendo.com/en-ca/store/products/the-legend-of-zelda-ocarina-of-time-the-legend-of-zelda-40th-anniversary-pin-set-129838": {
-      "buyable": true,
-      "detail": "isSalableQty=True schema=InStock",
+      "buyable": false,
+      "detail": "isSalableQty=False schema=OutOfStock",
       "fails": 0,
       "last_alerted": "2026-11-04T18:10:41+00:00",
       "last_error": null,
