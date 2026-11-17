@@ -123,7 +123,7 @@
     "https://www.nintendo.com/en-ca/store/products/the-legend-of-zelda-ocarina-of-time-the-legend-of-zelda-40th-anniversary-pin-set-129838": {
       "buyable": false,
       "detail": "isSalableQty=False schema=OutOfStock",
-      "fails": 1,
+      "fails": 2,
       "last_alerted": "2026-11-15T02:40:24+00:00",
       "last_error": "HTTP Error 500: Internal Server Error",
       "warned_broken": false
