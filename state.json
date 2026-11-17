@@ -91,9 +91,9 @@
     "https://www.nintendo.com/en-ca/store/products/nintendo-switch-2-carrying-case-screen-protector-the-legend-of-zelda-40th-anniversary-edition-127073": {
       "buyable": false,
       "detail": "isSalableQty=False schema=OutOfStock $49.99",
-      "fails": 0,
+      "fails": 1,
       "last_alerted": "2026-11-06T11:45:22+00:00",
-      "last_error": null,
+      "last_error": "HTTP Error 500: Internal Server Error",
       "warned_broken": false
     },
     "https://www.nintendo.com/en-ca/store/products/nintendo-switch-2-pro-controller-display-stand-the-legend-of-zelda-40th-anniversary-edition-127076": {
@@ -123,9 +123,9 @@
     "https://www.nintendo.com/en-ca/store/products/the-legend-of-zelda-ocarina-of-time-the-legend-of-zelda-40th-anniversary-pin-set-129838": {
       "buyable": false,
       "detail": "isSalableQty=False schema=OutOfStock",
-      "fails": 2,
+      "fails": 0,
       "last_alerted": "2026-11-15T02:40:24+00:00",
-      "last_error": "HTTP Error 500: Internal Server Error",
+      "last_error": null,
       "warned_broken": false
     },
     "https://www.walmart.ca/en/ip/Nintendo-Switch-2-Pro-Controller-The-Legend-of-Zelda-40th-Anniversary-Edition/3CVEAW67GHIT": {
