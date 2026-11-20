@@ -115,9 +115,9 @@
     "https://www.nintendo.com/en-ca/store/products/nintendo-switch-2-the-legend-of-zelda-40th-anniversary-edition-121642": {
       "buyable": false,
       "detail": "isSalableQty=False schema=OutOfStock $709.99",
-      "fails": 1,
+      "fails": 0,
       "last_alerted": "2026-11-19T12:15:14+00:00",
-      "last_error": "<urlopen error _ssl.c:1063: The handshake operation timed out>",
+      "last_error": null,
       "warned_broken": false
     },
     "https://www.nintendo.com/en-ca/store/products/the-legend-of-zelda-ocarina-of-time-the-legend-of-zelda-40th-anniversary-pin-set-129838": {
